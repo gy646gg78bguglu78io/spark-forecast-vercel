@@ -1,0 +1,1790 @@
+<!-- Spark! Cashflow Forecaster v1.0 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spark! Cashflow Forecaster</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    #root { min-height: 100vh; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#94a3b8">Loading...</div>
+  </div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+  <script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+  <script type="text/babel">
+    // ═══════════════════════════════════════════════════════════
+    // Globals from CDN
+    // ═══════════════════════════════════════════════════════════
+    const { useState, useMemo, useCallback, useRef, useEffect } = React;
+    const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+            ResponsiveContainer, ComposedChart, Area, Cell, ReferenceLine, PieChart, Pie } = window.Recharts;
+
+
+// ═══════════════════════════════════════════════════════════
+// SPARK! CASHFLOW FORECASTER v4
+// Worldbeaters Ltd — Built for speed, clarity, and control
+// ═══════════════════════════════════════════════════════════
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// Color palette
+const C = {
+  bg: "#0f172a",
+  surface: "#1e293b",
+  surfaceLight: "#334155",
+  surfaceHover: "#3b4c63",
+  border: "#475569",
+  borderLight: "#64748b",
+  text: "#f1f5f9",
+  textMuted: "#94a3b8",
+  textDim: "#64748b",
+  accent: "#f59e0b",
+  accentDim: "#d97706",
+  green: "#22c55e",
+  greenDim: "#16a34a",
+  greenBg: "rgba(34,197,94,0.1)",
+  red: "#ef4444",
+  redDim: "#dc2626",
+  redBg: "rgba(239,68,68,0.1)",
+  blue: "#3b82f6",
+  blueDim: "#2563eb",
+  blueBg: "rgba(59,130,246,0.1)",
+  purple: "#a855f7",
+  purpleDim: "#9333ea",
+  orange: "#f97316",
+  cyan: "#06b6d4",
+  pink: "#ec4899",
+  sidebar: "#0c1222",
+  sidebarHover: "#1a2744",
+  sidebarActive: "#1e3a5f",
+  yellow: "#eab308",
+  yellowBg: "rgba(234,179,8,0.1)",
+};
+
+// ─── Default Data (from Brixx actuals) ───────────────────
+const DEFAULT_OPENING_BALANCE = 112250;
+const VAT_RATE = 0.20;
+
+const DEFAULT_SHOWS = [
+  { id: 1, name: "NYE Dubai", month: "Jan", year: 2026, fee: 8500, status: "confirmed", days: 3 },
+  { id: 2, name: "Winter Lights Festival", month: "Jan", year: 2026, fee: 4200, status: "confirmed", days: 2 },
+  { id: 3, name: "Burns Night Glasgow", month: "Jan", year: 2026, fee: 3800, status: "confirmed", days: 1 },
+  { id: 4, name: "Lumiere Durham", month: "Feb", year: 2026, fee: 6500, status: "confirmed", days: 3 },
+  { id: 5, name: "Chinese New Year Liverpool", month: "Feb", year: 2026, fee: 4800, status: "confirmed", days: 2 },
+  { id: 6, name: "St David's Day Cardiff", month: "Mar", year: 2026, fee: 3500, status: "confirmed", days: 1 },
+  { id: 7, name: "Corporate - Deloitte", month: "Mar", year: 2026, fee: 7200, status: "confirmed", days: 1 },
+  { id: 8, name: "Easter Event Manchester", month: "Apr", year: 2026, fee: 3200, status: "likely", days: 1 },
+  { id: 9, name: "Council Lights Birmingham", month: "May", year: 2026, fee: 4500, status: "likely", days: 2 },
+  { id: 10, name: "Corporate - HSBC", month: "Jun", year: 2026, fee: 5500, status: "hoped", days: 1 },
+  { id: 11, name: "Festival Gig", month: "Jul", year: 2026, fee: 2800, status: "hoped", days: 2 },
+  { id: 12, name: "Edinburgh Fringe", month: "Aug", year: 2026, fee: 4000, status: "hoped", days: 3 },
+  { id: 13, name: "Blackpool Illuminations", month: "Sep", year: 2026, fee: 5200, status: "likely", days: 2 },
+  { id: 14, name: "Halloween Spectacular", month: "Oct", year: 2026, fee: 12000, status: "likely", days: 4 },
+  { id: 15, name: "Diwali Leicester", month: "Oct", year: 2026, fee: 5500, status: "likely", days: 2 },
+  { id: 16, name: "Bonfire Night Leeds", month: "Nov", year: 2026, fee: 6800, status: "likely", days: 2 },
+  { id: 17, name: "Xmas Lights - Newcastle", month: "Nov", year: 2026, fee: 8500, status: "likely", days: 3 },
+  { id: 18, name: "Xmas Lights - Manchester", month: "Nov", year: 2026, fee: 9200, status: "confirmed", days: 3 },
+  { id: 19, name: "Xmas Parade Liverpool", month: "Dec", year: 2026, fee: 7500, status: "confirmed", days: 2 },
+  { id: 20, name: "NYE London", month: "Dec", year: 2026, fee: 15000, status: "hoped", days: 2 },
+  { id: 21, name: "Corporate Christmas x3", month: "Dec", year: 2026, fee: 18000, status: "likely", days: 3 },
+  { id: 22, name: "Shopping Centre Xmas", month: "Dec", year: 2026, fee: 6000, status: "likely", days: 4 },
+  { id: 23, name: "Hogmanay Edinburgh", month: "Dec", year: 2026, fee: 8000, status: "hoped", days: 2 },
+];
+
+const DEFAULT_COST_GROUPS = [
+  {
+    id: "premises", name: "Premises & Office", icon: "🏢", enabled: true,
+    items: [
+      { id: "rent", name: "Royal Quays (Rent)", amount: 1664, enabled: true },
+      { id: "consumables", name: "Office Consumables", amount: 60, enabled: true },
+      { id: "misc", name: "Misc Expenses", amount: 275, enabled: true },
+      { id: "phones", name: "Phones & Internet", amount: 208, enabled: true },
+    ]
+  },
+  {
+    id: "software", name: "Software & Web", icon: "💻", enabled: true,
+    items: [
+      { id: "google", name: "Google Apps", amount: 25, enabled: true },
+      { id: "adobe", name: "Adobe Creative Cloud", amount: 56, enabled: true },
+      { id: "other_sw", name: "Other Software", amount: 250, enabled: true },
+      { id: "zapier", name: "Zapier", amount: 42, enabled: true, note: "£500/yr" },
+      { id: "brixx", name: "Brixx", amount: 0, enabled: false, note: "Replace with this app!" },
+    ]
+  },
+  {
+    id: "motor", name: "Motor & Transport", icon: "🚐", enabled: true,
+    items: [
+      { id: "fuel", name: "Fuel & Parking", amount: 950, enabled: true, note: "Avg — varies seasonally" },
+      { id: "insurance_van", name: "Van Insurance", amount: 354, enabled: true, note: "£4,250/yr" },
+      { id: "road_tax", name: "Road Tax", amount: 29, enabled: true, note: "£350/yr" },
+      { id: "mot", name: "MOT, Service & Repairs", amount: 100, enabled: true, note: "Variable" },
+    ]
+  },
+  {
+    id: "staff", name: "Staff & Contractors", icon: "👥", enabled: true,
+    items: [
+      { id: "directors", name: "Chris & Alex (Directors)", amount: 4190, enabled: true, note: "£2,095 each" },
+      { id: "mark", name: "Mark (Extra Staff)", amount: 515, enabled: true },
+      { id: "contractors", name: "Session Contractors", amount: 500, enabled: true, note: "Show-dependent" },
+    ]
+  },
+  {
+    id: "finance", name: "Finance & Insurance", icon: "🏦", enabled: true,
+    items: [
+      { id: "pli", name: "PLI Insurance", amount: 250, enabled: true, note: "£3,000/yr" },
+      { id: "accounting", name: "Accounting Fees", amount: 200, enabled: true },
+      { id: "bank", name: "Bank Charges", amount: 20, enabled: true },
+      { id: "bbl_capital", name: "BBL Repayment (Capital)", amount: 491, enabled: true },
+      { id: "bbl_interest", name: "BBL Interest", amount: 53, enabled: true, note: "Decreasing" },
+    ]
+  },
+  {
+    id: "show_costs", name: "Show Costs", icon: "🥁", enabled: true,
+    items: [
+      { id: "materials", name: "Materials & Consumables", amount: 400, enabled: true },
+      { id: "xmas_meal", name: "Christmas Meals / Team", amount: 125, enabled: true, note: "£1,500/yr peak in Dec-Feb" },
+    ]
+  },
+  {
+    id: "dividends", name: "Dividends", icon: "💰", enabled: true,
+    items: [
+      { id: "dividends_full", name: "Directors Dividends", amount: 5500, enabled: true },
+    ]
+  },
+];
+
+const DEFAULT_PROJECTS = [
+  {
+    id: "new_van", name: "New Van", icon: "🚐", enabled: false,
+    items: [
+      { id: "van_purchase", name: "Van Purchase", amount: 35000, type: "one-off", month: "Jun", year: 2026 },
+      { id: "van_tracker", name: "Tracker + Subscription", amount: 50, type: "monthly", startMonth: "Jul", startYear: 2026 },
+    ]
+  },
+  {
+    id: "costume", name: "Costume Refresh", icon: "👔", enabled: false,
+    items: [
+      { id: "costume_repair", name: "Repairs & New Costumes", amount: 5500, type: "one-off", month: "Mar", year: 2026 },
+    ]
+  },
+  {
+    id: "fireflies", name: "Fireflies (New Act)", icon: "✨", enabled: true,
+    items: [
+      { id: "ff_rent", name: "Equipment Rent", amount: 50, type: "monthly", startMonth: "Jan", startYear: 2026 },
+      { id: "ff_ops", name: "Operational Costs", amount: 100, type: "monthly", startMonth: "Mar", startYear: 2026 },
+    ]
+  },
+  {
+    id: "tech", name: "Tech Upgrade", icon: "🔧", enabled: false,
+    items: [
+      { id: "led_upgrade", name: "New LED Drums", amount: 8000, type: "one-off", month: "Sep", year: 2026 },
+      { id: "controllers", name: "Controllers & Wiring", amount: 2500, type: "one-off", month: "Sep", year: 2026 },
+    ]
+  },
+  {
+    id: "filming", name: "Promo Filming", icon: "🎬", enabled: false,
+    items: [
+      { id: "filming_cost", name: "Film Production", amount: 4000, type: "one-off", month: "May", year: 2026 },
+    ]
+  },
+  {
+    id: "training", name: "Training", icon: "📚", enabled: false,
+    items: [
+      { id: "training_course", name: "Team Training", amount: 1500, type: "one-off", month: "Apr", year: 2026 },
+      { id: "training_travel", name: "Travel & Accommodation", amount: 800, type: "one-off", month: "Apr", year: 2026 },
+    ]
+  },
+];
+
+const DEFAULT_OTHER_INCOME = [
+  { id: "oi_1", name: "NTCC Grant", amount: 0, type: "one-off", month: "Apr", year: 2026, enabled: true, note: "If applicable" },
+  { id: "oi_2", name: "Workshop Revenue", amount: 200, type: "monthly", startMonth: "Mar", startYear: 2026, enabled: false, note: "Potential" },
+  { id: "oi_3", name: "Equipment Hire Out", amount: 150, type: "monthly", startMonth: "Jan", startYear: 2026, enabled: false, note: "" },
+];
+
+const SCENARIOS = {
+  expected: { label: "Expected", incMult: 1.0, costMult: 1.0, color: C.blue },
+  optimistic: { label: "Optimistic", incMult: 1.15, costMult: 0.95, color: C.green },
+  pessimistic: { label: "Pessimistic", incMult: 0.75, costMult: 1.10, color: C.red },
+};
+
+const STATUS_CONFIG = {
+  confirmed: { label: "Confirmed", prob: 1.0, color: C.green, bg: C.greenBg },
+  likely: { label: "Likely", prob: 0.7, color: C.accent, bg: C.yellowBg },
+  hoped: { label: "Hoped For", prob: 0.4, color: C.blue, bg: C.blueBg },
+};
+
+// ─── Utility Functions ───────────────────────────────────
+const fmt = (n) => {
+  if (n === undefined || n === null) return "£0";
+  const abs = Math.abs(n);
+  if (abs >= 1000) return (n < 0 ? "-" : "") + "£" + abs.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return (n < 0 ? "-" : "") + "£" + abs.toFixed(0);
+};
+
+const fmtK = (n) => {
+  const abs = Math.abs(n);
+  if (abs >= 1000) return (n < 0 ? "-" : "") + "£" + (abs / 1000).toFixed(abs >= 10000 ? 0 : 1) + "k";
+  return fmt(n);
+};
+
+const monthIndex = (m) => MONTHS.indexOf(m);
+const monthKey = (m, y) => `${y}-${String(MONTHS.indexOf(m) + 1).padStart(2, "0")}`;
+
+function generateMonthRange(startYear, startMonth, count) {
+  const result = [];
+  let y = startYear, m = startMonth;
+  for (let i = 0; i < count; i++) {
+    result.push({ month: MONTHS[m], year: y, key: `${y}-${String(m + 1).padStart(2, "0")}`, label: `${MONTHS[m]} ${y}` });
+    m++;
+    if (m >= 12) { m = 0; y++; }
+  }
+  return result;
+}
+
+// ─── Reusable Components ─────────────────────────────────
+
+function Toggle({ on, onChange, size = "sm" }) {
+  const w = size === "sm" ? 36 : 44;
+  const h = size === "sm" ? 20 : 24;
+  const dot = size === "sm" ? 14 : 18;
+  return (
+    <div onClick={(e) => { e.stopPropagation(); onChange(!on); }}
+      style={{ width: w, height: h, borderRadius: h, backgroundColor: on ? C.green : C.surfaceLight,
+        cursor: "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0 }}>
+      <div style={{ width: dot, height: dot, borderRadius: "50%", backgroundColor: "#fff",
+        position: "absolute", top: (h - dot) / 2, left: on ? w - dot - 3 : 3, transition: "all 0.2s" }} />
+    </div>
+  );
+}
+
+function EditableCell({ value, onChange, prefix = "£", style = {} }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (editing && inputRef.current) inputRef.current.select(); }, [editing]);
+
+  if (editing) {
+    return (
+      <input ref={inputRef} value={draft} autoFocus
+        onChange={e => setDraft(e.target.value)}
+        onBlur={() => { onChange(parseFloat(draft) || 0); setEditing(false); }}
+        onKeyDown={e => { if (e.key === "Enter") { onChange(parseFloat(draft) || 0); setEditing(false); } if (e.key === "Escape") setEditing(false); }}
+        style={{ background: C.bg, border: `1px solid ${C.accent}`, color: C.text, borderRadius: 4,
+          padding: "2px 6px", width: "100%", fontSize: 13, textAlign: "right", outline: "none", ...style }} />
+    );
+  }
+  return (
+    <span onClick={() => { setDraft(String(value)); setEditing(true); }}
+      style={{ cursor: "pointer", borderBottom: `1px dashed ${C.borderLight}`, padding: "1px 0", ...style }}>
+      {prefix}{typeof value === 'number' ? value.toLocaleString() : value}
+    </span>
+  );
+}
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_CONFIG[status];
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 10,
+      fontSize: 11, fontWeight: 600, color: cfg.color, backgroundColor: cfg.bg }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: cfg.color }} />
+      {cfg.label}
+    </span>
+  );
+}
+
+function KPICard({ label, value, subtitle, color = C.text, icon, trend }) {
+  return (
+    <div style={{ background: C.surface, borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 150,
+      border: `1px solid ${C.border}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        {icon && <span style={{ fontSize: 16 }}>{icon}</span>}
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 800, color, letterSpacing: -0.5 }}>{value}</div>
+      {subtitle && <div style={{ fontSize: 11, color: trend === "up" ? C.green : trend === "down" ? C.red : C.textMuted, marginTop: 2 }}>
+        {trend === "up" && "▲ "}{trend === "down" && "▼ "}{subtitle}
+      </div>}
+    </div>
+  );
+}
+
+function HealthDot({ value, thresholds = [0, 5000, 20000] }) {
+  const color = value < thresholds[0] ? C.red : value < thresholds[1] ? C.orange : value < thresholds[2] ? C.accent : C.green;
+  return <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", backgroundColor: color }} />;
+}
+
+// Seasonal awareness labels
+const SEASONAL = {
+  0: { tag: "Q1", note: "Variable" },
+  1: { tag: "Q1", note: "Variable" },
+  2: { tag: "Q1", note: "Variable" },
+  3: { tag: "Q2", note: "Quiet" },
+  4: { tag: "Q2", note: "Quiet" },
+  5: { tag: "Q2", note: "Quiet" },
+  6: { tag: "Q3", note: "Quiet" },
+  7: { tag: "Q3", note: "Building" },
+  8: { tag: "Q3", note: "Building" },
+  9: { tag: "Q4", note: "Peak" },
+  10: { tag: "Q4", note: "Peak" },
+  11: { tag: "Q4", note: "Peak" },
+};
+
+// Custom tooltip for charts
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 6 }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 2 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: p.color }} />
+          <span style={{ color: C.textMuted }}>{p.name}:</span>
+          <span style={{ color: C.text, fontWeight: 600 }}>{fmt(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Inline editable text (no prompt() needed)
+function EditableText({ value, onChange, style = {} }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (editing && inputRef.current) inputRef.current.select(); }, [editing]);
+
+  if (editing) {
+    return (
+      <input ref={inputRef} value={draft} autoFocus
+        onChange={e => setDraft(e.target.value)}
+        onBlur={() => { if (draft.trim()) onChange(draft.trim()); setEditing(false); }}
+        onKeyDown={e => { if (e.key === "Enter") { if (draft.trim()) onChange(draft.trim()); setEditing(false); } if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+        style={{ background: C.bg, border: `1px solid ${C.accent}`, color: C.text, borderRadius: 4,
+          padding: "2px 6px", fontSize: 13, outline: "none", minWidth: 80, ...style }} />
+    );
+  }
+  return (
+    <span onClick={() => { setDraft(value); setEditing(true); }}
+      style={{ cursor: "pointer", borderBottom: `1px dashed ${C.borderLight}`, padding: "1px 0", ...style }}>
+      {value}
+    </span>
+  );
+}
+
+// Small icon button
+function IconBtn({ icon, onClick, color = C.textDim, hoverColor = C.red, title = "" }) {
+  return (
+    <button onClick={onClick} title={title}
+      style={{ background: "none", border: "none", color, cursor: "pointer", fontSize: 13, padding: "2px 4px", lineHeight: 1 }}
+      onMouseEnter={e => e.currentTarget.style.color = hoverColor}
+      onMouseLeave={e => e.currentTarget.style.color = color}>
+      {icon}
+    </button>
+  );
+}
+
+// Action button (+ Add ...)
+function AddButton({ label, onClick, style: extraStyle = {} }) {
+  return (
+    <button onClick={onClick}
+      style={{ padding: "6px 14px", borderRadius: 6, border: `1px dashed ${C.border}`,
+        background: "transparent", color: C.textMuted, fontSize: 12, cursor: "pointer",
+        transition: "all 0.15s", ...extraStyle }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}>
+      {label}
+    </button>
+  );
+}
+
+const ICON_OPTIONS = ["🎯","🚐","👔","✨","🔧","🎬","📚","🏠","💡","🎵","🎪","🛠️","📦","🎨","🏗️","💻","🎤","📱","🌍","⚡"];
+
+// ─── Sidebar Nav ─────────────────────────────────────────
+const NAV_ITEMS = [
+  { id: "dashboard", icon: "📊", label: "Dashboard" },
+  { id: "pipeline", icon: "🎭", label: "Show Pipeline" },
+  { id: "other_income", icon: "💷", label: "Other Income" },
+  { id: "costs", icon: "📋", label: "Monthly Costs" },
+  { id: "projects", icon: "🔧", label: "Projects" },
+  { id: "vat", icon: "🏛️", label: "VAT & Tax" },
+  { id: "monthly", icon: "📅", label: "Monthly Detail" },
+  { id: "scenarios", icon: "🔀", label: "Scenarios" },
+];
+
+function Sidebar({ active, onNav, scenario, onScenario, timeframe, onTimeframe }) {
+  return (
+    <div style={{ width: 220, background: C.sidebar, borderRight: `1px solid ${C.border}`,
+      display: "flex", flexDirection: "column", height: "100vh", position: "fixed", left: 0, top: 0, zIndex: 100 }}>
+      {/* Logo */}
+      <div style={{ padding: "20px 16px 12px", borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 24 }}>⚡</span>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.accent, letterSpacing: -0.5 }}>SPARK!</div>
+            <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Cashflow Forecaster</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <div style={{ flex: 1, padding: "8px 8px", overflowY: "auto" }}>
+        {NAV_ITEMS.map(item => (
+          <div key={item.id} onClick={() => onNav(item.id)}
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8,
+              cursor: "pointer", marginBottom: 2, fontSize: 13, fontWeight: active === item.id ? 700 : 500,
+              color: active === item.id ? C.text : C.textMuted,
+              background: active === item.id ? C.sidebarActive : "transparent",
+              transition: "all 0.15s" }}
+            onMouseEnter={e => { if (active !== item.id) e.currentTarget.style.background = C.sidebarHover; }}
+            onMouseLeave={e => { if (active !== item.id) e.currentTarget.style.background = "transparent"; }}>
+            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Scenario Selector */}
+      <div style={{ padding: "12px", borderTop: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Scenario</div>
+        {Object.entries(SCENARIOS).map(([key, sc]) => (
+          <div key={key} onClick={() => onScenario(key)}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
+              cursor: "pointer", marginBottom: 2, fontSize: 12,
+              background: scenario === key ? `${sc.color}22` : "transparent",
+              color: scenario === key ? sc.color : C.textMuted,
+              fontWeight: scenario === key ? 700 : 500 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: sc.color, opacity: scenario === key ? 1 : 0.4 }} />
+            {sc.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Timeframe */}
+      <div style={{ padding: "0 12px 16px" }}>
+        <div style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Timeframe</div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {[6, 12, 24].map(t => (
+            <button key={t} onClick={() => onTimeframe(t)}
+              style={{ flex: 1, padding: "5px 0", borderRadius: 5, border: "none", cursor: "pointer",
+                fontSize: 11, fontWeight: 700,
+                background: timeframe === t ? C.accent : C.surfaceLight,
+                color: timeframe === t ? C.bg : C.textMuted }}>
+              {t}m
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE COMPONENTS
+// ═══════════════════════════════════════════════════════════
+
+// ─── DASHBOARD ───────────────────────────────────────────
+function DashboardPage({ data, openingBalance, scenario }) {
+  const sc = SCENARIOS[scenario];
+  const totalIncome = data.reduce((s, d) => s + d.income, 0);
+  const totalCosts = data.reduce((s, d) => s + d.totalCosts, 0);
+  const netCash = totalIncome - totalCosts;
+  const endBalance = data.length > 0 ? data[data.length - 1].balance : openingBalance;
+  const lowestBalance = Math.min(...data.map(d => d.balance));
+  const lowestMonth = data.find(d => d.balance === lowestBalance);
+  const runwayMonths = data.length > 0 ? (() => {
+    const avgMonthlyCost = totalCosts / data.length;
+    return avgMonthlyCost > 0 ? Math.floor(endBalance / avgMonthlyCost) : 99;
+  })() : 0;
+
+  // Quarterly summary
+  const quarters = {};
+  data.forEach(d => {
+    const qi = Math.floor(d.monthIdx / 3) + 1;
+    const qk = `Q${qi} ${d.year}`;
+    if (!quarters[qk]) quarters[qk] = { income: 0, costs: 0, label: qk };
+    quarters[qk].income += d.income;
+    quarters[qk].costs += d.totalCosts;
+  });
+  const quarterData = Object.values(quarters).map(q => ({ ...q, net: q.income - q.costs }));
+
+  return (
+    <div>
+      {/* KPI Cards */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <KPICard label="Cash In" value={fmtK(totalIncome)} icon="📈"
+          subtitle={`${data.length} months, ${sc.label}`} color={C.green} />
+        <KPICard label="Cash Out" value={fmtK(totalCosts)} icon="📉" color={C.red}
+          subtitle={`Avg ${fmtK(totalCosts / Math.max(data.length, 1))}/mo`} />
+        <KPICard label="Net Cash" value={fmtK(netCash)} icon="💰"
+          color={netCash >= 0 ? C.green : C.red}
+          subtitle={netCash >= 0 ? "Positive cashflow" : "Negative — review costs"} trend={netCash >= 0 ? "up" : "down"} />
+        <KPICard label="End Balance" value={fmtK(endBalance)} icon="🏦" color={C.blue}
+          subtitle={`Started at ${fmtK(openingBalance)}`} />
+        <KPICard label="Runway" value={`${runwayMonths} mo`} icon="⏱️"
+          color={runwayMonths > 6 ? C.green : runwayMonths > 3 ? C.accent : C.red}
+          subtitle={runwayMonths > 6 ? "Healthy" : "Monitor closely"} />
+        <KPICard label="Lowest Point" value={fmtK(lowestBalance)} icon="⚠️"
+          color={lowestBalance > 20000 ? C.green : lowestBalance > 0 ? C.accent : C.red}
+          subtitle={lowestMonth ? lowestMonth.label : ""} />
+      </div>
+
+      {/* Main Cashflow Chart */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Cashflow Overview</div>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+            <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
+            <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
+            <Tooltip content={<ChartTooltip />} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="income" name="Income" fill={C.green} radius={[3, 3, 0, 0]} opacity={0.8} />
+            <Bar dataKey="totalCosts" name="Costs" fill={C.red} radius={[3, 3, 0, 0]} opacity={0.6} />
+            <Line dataKey="balance" name="Balance" type="monotone" stroke={C.blue} strokeWidth={2.5} dot={false} />
+            <ReferenceLine y={0} stroke={C.red} strokeDasharray="4 4" strokeOpacity={0.5} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Two-column: Quarterly + Seasonal */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Quarterly Bars */}
+        <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Quarterly Net Cash</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={quarterData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
+              <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="net" name="Net" radius={[4, 4, 0, 0]}>
+                {quarterData.map((d, i) => (
+                  <Cell key={i} fill={d.net >= 0 ? C.green : C.red} opacity={0.8} />
+                ))}
+              </Bar>
+              <ReferenceLine y={0} stroke={C.textDim} strokeDasharray="3 3" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Seasonal Heat Map */}
+        <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Seasonal Income Pattern</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginTop: 8 }}>
+            {data.slice(0, 12).map((d, i) => {
+              const intensity = d.income > 0 ? Math.min(d.income / 30000, 1) : 0;
+              const bgColor = `rgba(34, 197, 94, ${0.08 + intensity * 0.5})`;
+              return (
+                <div key={i} style={{ background: bgColor, borderRadius: 6, padding: "8px 6px", textAlign: "center",
+                  border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{d.month}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.green, margin: "2px 0" }}>{fmtK(d.income)}</div>
+                  <div style={{ fontSize: 9, color: C.textMuted }}>{SEASONAL[d.monthIdx]?.note}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SHOW PIPELINE ───────────────────────────────────────
+function PipelinePage({ shows, setShows }) {
+  const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
+  const nextId = Math.max(...shows.map(s => s.id), 0) + 1;
+
+  const addShow = () => {
+    setShows([...shows, { id: nextId, name: "New Show", month: "Jan", year: 2026, fee: 3000, status: "hoped", days: 1 }]);
+  };
+
+  const updateShow = (id, field, value) => {
+    setShows(shows.map(s => s.id === id ? { ...s, [field]: field === "fee" || field === "days" ? (parseFloat(value) || 0) : value } : s));
+  };
+
+  const removeShow = (id) => setShows(shows.filter(s => s.id !== id));
+
+  const filtered = shows.filter(s => filter === "all" || s.status === filter);
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "date") return (a.year * 12 + monthIndex(a.month)) - (b.year * 12 + monthIndex(b.month));
+    if (sortBy === "fee") return b.fee - a.fee;
+    return 0;
+  });
+
+  const totals = {
+    confirmed: shows.filter(s => s.status === "confirmed").reduce((s, sh) => s + sh.fee, 0),
+    likely: shows.filter(s => s.status === "likely").reduce((s, sh) => s + sh.fee, 0),
+    hoped: shows.filter(s => s.status === "hoped").reduce((s, sh) => s + sh.fee, 0),
+  };
+  const weighted = totals.confirmed + totals.likely * 0.7 + totals.hoped * 0.4;
+
+  return (
+    <div>
+      {/* Pipeline Summary Cards */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        <KPICard label="Confirmed" value={fmtK(totals.confirmed)} color={C.green} icon="✅"
+          subtitle={`${shows.filter(s => s.status === "confirmed").length} shows`} />
+        <KPICard label="Likely (70%)" value={fmtK(totals.likely)} color={C.accent} icon="🎯"
+          subtitle={`${shows.filter(s => s.status === "likely").length} shows`} />
+        <KPICard label="Hoped (40%)" value={fmtK(totals.hoped)} color={C.blue} icon="🤞"
+          subtitle={`${shows.filter(s => s.status === "hoped").length} shows`} />
+        <KPICard label="Weighted Total" value={fmtK(weighted)} color={C.purple} icon="⚡"
+          subtitle="Probability-adjusted" />
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
+        {["all", "confirmed", "likely", "hoped"].map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            style={{ padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600,
+              background: filter === f ? C.accent : C.surfaceLight,
+              color: filter === f ? C.bg : C.textMuted }}>
+            {f === "all" ? `All (${shows.length})` : `${STATUS_CONFIG[f]?.label} (${shows.filter(s => s.status === f).length})`}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+          style={{ background: C.surfaceLight, color: C.text, border: `1px solid ${C.border}`, borderRadius: 6,
+            padding: "6px 10px", fontSize: 12 }}>
+          <option value="date">Sort by Date</option>
+          <option value="fee">Sort by Fee</option>
+        </select>
+        <button onClick={addShow}
+          style={{ padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+            background: C.green, color: "#fff", fontSize: 12, fontWeight: 700 }}>
+          + Add Show
+        </button>
+      </div>
+
+      {/* Show Table */}
+      <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              {["Show", "Date", "Days", "Fee", "Status", "Weighted", ""].map((h, i) => (
+                <th key={i} style={{ padding: "10px 12px", textAlign: i >= 2 ? "right" : "left",
+                  fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(show => (
+              <tr key={show.id} style={{ borderBottom: `1px solid ${C.border}22` }}
+                onMouseEnter={e => e.currentTarget.style.background = C.surfaceHover}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <td style={{ padding: "8px 12px" }}>
+                  <EditableText value={show.name} onChange={v => updateShow(show.id, "name", v)}
+                    style={{ fontSize: 13, fontWeight: 600, color: C.text }} />
+                </td>
+                <td style={{ padding: "8px 12px" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <select value={show.month} onChange={e => updateShow(show.id, "month", e.target.value)}
+                      style={{ background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 4px", fontSize: 12 }}>
+                      {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select value={show.year} onChange={e => updateShow(show.id, "year", parseInt(e.target.value))}
+                      style={{ background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 4px", fontSize: 12 }}>
+                      {[2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                  <EditableCell value={show.days} prefix="" onChange={v => updateShow(show.id, "days", v)} />
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: C.green }}>
+                  <EditableCell value={show.fee} onChange={v => updateShow(show.id, "fee", v)} />
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                  <select value={show.status} onChange={e => updateShow(show.id, "status", e.target.value)}
+                    style={{ background: "transparent", color: STATUS_CONFIG[show.status].color,
+                      border: `1px solid ${STATUS_CONFIG[show.status].color}44`, borderRadius: 10,
+                      padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="likely">Likely</option>
+                    <option value="hoped">Hoped For</option>
+                  </select>
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.textMuted, fontSize: 12 }}>
+                  {fmt(show.fee * STATUS_CONFIG[show.status].prob)}
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                  <button onClick={() => removeShow(show.id)}
+                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 14, padding: 4 }}
+                    onMouseEnter={e => e.currentTarget.style.color = C.red}
+                    onMouseLeave={e => e.currentTarget.style.color = C.textDim}>✕</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── MONTHLY COSTS ───────────────────────────────────────
+function CostsPage({ costGroups, setCostGroups }) {
+  const totalMonthly = costGroups.filter(g => g.enabled).reduce((s, g) =>
+    s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
+
+  const toggleGroup = (gid) => setCostGroups(costGroups.map(g => g.id === gid ? { ...g, enabled: !g.enabled } : g));
+  const toggleItem = (gid, iid) => setCostGroups(costGroups.map(g => g.id === gid ? {
+    ...g, items: g.items.map(i => i.id === iid ? { ...i, enabled: !i.enabled } : i)
+  } : g));
+  const updateAmount = (gid, iid, val) => setCostGroups(costGroups.map(g => g.id === gid ? {
+    ...g, items: g.items.map(i => i.id === iid ? { ...i, amount: val } : i)
+  } : g));
+  const addItem = (gid) => setCostGroups(costGroups.map(g => g.id === gid ? {
+    ...g, items: [...g.items, { id: `item_${Date.now()}`, name: "New Item", amount: 0, enabled: true }]
+  } : g));
+  const removeItem = (gid, iid) => setCostGroups(costGroups.map(g => g.id === gid ? {
+    ...g, items: g.items.filter(i => i.id !== iid)
+  } : g));
+  const updateItemName = (gid, iid, name) => setCostGroups(costGroups.map(g => g.id === gid ? {
+    ...g, items: g.items.map(i => i.id === iid ? { ...i, name } : i)
+  } : g));
+  const renameGroup = (gid, name) => setCostGroups(costGroups.map(g => g.id === gid ? { ...g, name } : g));
+  const removeGroup = (gid) => setCostGroups(costGroups.filter(g => g.id !== gid));
+  const addGroup = () => setCostGroups([...costGroups, {
+    id: `grp_${Date.now()}`, name: "New Group", icon: "📁", enabled: true, items: []
+  }]);
+
+  const pieData = costGroups.filter(g => g.enabled).map(g => ({
+    name: g.name, value: g.items.filter(i => i.enabled).reduce((s, i) => s + i.amount, 0), icon: g.icon,
+  })).filter(d => d.value > 0);
+  const PIE_COLORS = [C.blue, C.green, C.accent, C.purple, C.orange, C.cyan, C.pink];
+
+  return (
+    <div>
+      {/* Summary */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        <KPICard label="Total Monthly" value={fmt(totalMonthly)} color={C.red} icon="📊"
+          subtitle={`${costGroups.filter(g => g.enabled).length}/${costGroups.length} groups active`} />
+        <KPICard label="Annual Estimate" value={fmtK(totalMonthly * 12)} color={C.orange} icon="📅"
+          subtitle="Based on current monthly" />
+        <div style={{ background: C.surface, borderRadius: 10, padding: "12px 16px", flex: 1.5, minWidth: 200,
+          border: `1px solid ${C.border}`, display: "flex", alignItems: "center" }}>
+          <ResponsiveContainer width="100%" height={100}>
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                innerRadius={25} outerRadius={42} paddingAngle={2}>
+                {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+              </Pie>
+              <Tooltip content={<ChartTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div style={{ marginLeft: 8, fontSize: 10 }}>
+            {pieData.map((d, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                <span style={{ color: C.textMuted }}>{d.icon} {fmt(d.value)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Cost Groups */}
+      {costGroups.map(group => {
+        const groupTotal = group.items.filter(i => i.enabled).reduce((s, i) => s + i.amount, 0);
+        return (
+          <div key={group.id} style={{ background: C.surface, borderRadius: 10, marginBottom: 12,
+            border: `1px solid ${group.enabled ? C.border : C.border + "44"}`, opacity: group.enabled ? 1 : 0.5,
+            transition: "all 0.2s" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "12px 16px", borderBottom: group.enabled ? `1px solid ${C.border}22` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Toggle on={group.enabled} onChange={() => toggleGroup(group.id)} />
+                <span style={{ fontSize: 18 }}>{group.icon}</span>
+                <EditableText value={group.name} onChange={v => renameGroup(group.id, v)}
+                  style={{ fontSize: 14, fontWeight: 700, color: C.text }} />
+                <span style={{ fontSize: 12, color: C.textMuted }}>({group.items.length})</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: group.enabled ? C.accent : C.textDim }}>
+                  {fmt(groupTotal)}<span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>/mo</span>
+                </span>
+                <IconBtn icon="🗑️" onClick={() => removeGroup(group.id)} title="Delete group" hoverColor={C.red} />
+              </div>
+            </div>
+            {group.enabled && (
+              <div style={{ padding: "4px 16px 12px" }}>
+                {group.items.map(item => (
+                  <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "6px 0", borderBottom: `1px solid ${C.border}11` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                      <Toggle on={item.enabled} onChange={() => toggleItem(group.id, item.id)} size="sm" />
+                      <EditableText value={item.name} onChange={v => updateItemName(group.id, item.id, v)}
+                        style={{ fontSize: 13, color: item.enabled ? C.text : C.textDim }} />
+                      {item.note && <span style={{ fontSize: 10, color: C.textDim, fontStyle: "italic" }}>({item.note})</span>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: item.enabled ? C.text : C.textDim }}>
+                        <EditableCell value={item.amount} onChange={v => updateAmount(group.id, item.id, v)} />
+                        <span style={{ fontSize: 10, color: C.textMuted }}>/mo</span>
+                      </span>
+                      <IconBtn icon="✕" onClick={() => removeItem(group.id, item.id)} />
+                    </div>
+                  </div>
+                ))}
+                <AddButton label="+ Add Item" onClick={() => addItem(group.id)} style={{ marginTop: 6, fontSize: 11, padding: "4px 12px" }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <AddButton label="+ Add Cost Group" onClick={addGroup} style={{ marginTop: 4, width: "100%", padding: "10px 0" }} />
+    </div>
+  );
+}
+
+// ─── PROJECTS ────────────────────────────────────────────
+function ProjectsPage({ projects, setProjects }) {
+  const toggleProject = (pid) => setProjects(projects.map(p => p.id === pid ? { ...p, enabled: !p.enabled } : p));
+  const renameProject = (pid, name) => setProjects(projects.map(p => p.id === pid ? { ...p, name } : p));
+  const removeProject = (pid) => setProjects(projects.filter(p => p.id !== pid));
+  const updateProjectItem = (pid, iid, field, value) => setProjects(projects.map(p => p.id === pid ? {
+    ...p, items: p.items.map(i => i.id === iid ? { ...i, [field]: value } : i)
+  } : p));
+  const removeProjectItem = (pid, iid) => setProjects(projects.map(p => p.id === pid ? {
+    ...p, items: p.items.filter(i => i.id !== iid)
+  } : p));
+  const addProjectItem = (pid, type) => setProjects(projects.map(p => p.id === pid ? {
+    ...p, items: [...p.items, type === "one-off"
+      ? { id: `pi_${Date.now()}`, name: "New Item", amount: 0, type: "one-off", month: "Jan", year: 2026 }
+      : { id: `pi_${Date.now()}`, name: "New Item", amount: 0, type: "monthly", startMonth: "Jan", startYear: 2026 }
+    ]
+  } : p));
+  const addProject = () => setProjects([...projects, {
+    id: `proj_${Date.now()}`, name: "New Project", icon: ICON_OPTIONS[Math.floor(Math.random() * ICON_OPTIONS.length)],
+    enabled: true, items: []
+  }]);
+
+  const totalEnabled = projects.filter(p => p.enabled).reduce((s, p) =>
+    s + p.items.reduce((si, i) => si + (i.type === "one-off" ? i.amount : i.amount * 12), 0), 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        <KPICard label="Active Projects" value={`${projects.filter(p => p.enabled).length}/${projects.length}`}
+          color={C.purple} icon="🔧" subtitle="Toggle to model what-if" />
+        <KPICard label="Total Cost (Active)" value={fmtK(totalEnabled)} color={C.orange} icon="💸"
+          subtitle="One-off + annualized recurring" />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {projects.map(proj => (
+          <div key={proj.id} style={{ background: C.surface, borderRadius: 10, padding: 16,
+            border: `1px solid ${proj.enabled ? C.accent + "44" : C.border}`, opacity: proj.enabled ? 1 : 0.55,
+            transition: "all 0.2s" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 20 }}>{proj.icon}</span>
+                <EditableText value={proj.name} onChange={v => renameProject(proj.id, v)}
+                  style={{ fontSize: 14, fontWeight: 700, color: C.text }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Toggle on={proj.enabled} onChange={() => toggleProject(proj.id)} />
+                <IconBtn icon="🗑️" onClick={() => removeProject(proj.id)} title="Delete project" hoverColor={C.red} />
+              </div>
+            </div>
+            {proj.items.map(item => (
+              <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "6px 0", fontSize: 12, borderBottom: `1px solid ${C.border}11` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                  <EditableText value={item.name} onChange={v => updateProjectItem(proj.id, item.id, "name", v)}
+                    style={{ color: C.text, fontSize: 12 }} />
+                  {item.type === "one-off" ? (
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <select value={item.month} onChange={e => updateProjectItem(proj.id, item.id, "month", e.target.value)}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={item.year} onChange={e => updateProjectItem(proj.id, item.id, "year", parseInt(e.target.value))}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {[2026,2027,2028].map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: C.textDim }}>from</span>
+                      <select value={item.startMonth} onChange={e => updateProjectItem(proj.id, item.id, "startMonth", e.target.value)}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={item.startYear} onChange={e => updateProjectItem(proj.id, item.id, "startYear", parseInt(e.target.value))}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {[2026,2027,2028].map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontWeight: 700, color: C.accent }}>
+                    <EditableCell value={item.amount} onChange={v => updateProjectItem(proj.id, item.id, "amount", v)} />
+                  </span>
+                  <select value={item.type} onChange={e => {
+                    const newType = e.target.value;
+                    if (newType === "one-off") updateProjectItem(proj.id, item.id, "type", "one-off");
+                    else updateProjectItem(proj.id, item.id, "type", "monthly");
+                  }} style={{ background: C.bg, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 4px", fontSize: 10 }}>
+                    <option value="one-off">one-off</option>
+                    <option value="monthly">/mo</option>
+                  </select>
+                  <IconBtn icon="✕" onClick={() => removeProjectItem(proj.id, item.id)} />
+                </div>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <AddButton label="+ One-off" onClick={() => addProjectItem(proj.id, "one-off")} style={{ fontSize: 10, padding: "3px 8px", flex: 1 }} />
+              <AddButton label="+ Monthly" onClick={() => addProjectItem(proj.id, "monthly")} style={{ fontSize: 10, padding: "3px 8px", flex: 1 }} />
+            </div>
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}22`,
+              fontSize: 12, fontWeight: 700, color: C.textMuted, textAlign: "right" }}>
+              Total: {fmt(proj.items.reduce((s, i) => s + (i.type === "one-off" ? i.amount : i.amount * 12), 0))}
+              <span style={{ fontWeight: 400, fontSize: 10 }}> (one-off + annual)</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <AddButton label="+ Add Project" onClick={addProject} style={{ marginTop: 12, width: "100%", padding: "10px 0" }} />
+    </div>
+  );
+}
+
+// ─── OTHER INCOME ────────────────────────────────────────
+function OtherIncomePage({ otherIncome, setOtherIncome }) {
+  const updateItem = (id, field, value) => setOtherIncome(otherIncome.map(i => i.id === id ? { ...i, [field]: value } : i));
+  const toggleItem = (id) => setOtherIncome(otherIncome.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i));
+  const removeItem = (id) => setOtherIncome(otherIncome.filter(i => i.id !== id));
+  const addItem = (type) => setOtherIncome([...otherIncome,
+    type === "one-off"
+      ? { id: `oi_${Date.now()}`, name: "New Income", amount: 0, type: "one-off", month: "Jan", year: 2026, enabled: true, note: "" }
+      : { id: `oi_${Date.now()}`, name: "New Income", amount: 0, type: "monthly", startMonth: "Jan", startYear: 2026, enabled: true, note: "" }
+  ]);
+
+  const totalOneOff = otherIncome.filter(i => i.enabled && i.type === "one-off").reduce((s, i) => s + i.amount, 0);
+  const totalMonthly = otherIncome.filter(i => i.enabled && i.type === "monthly").reduce((s, i) => s + i.amount, 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        <KPICard label="Monthly Recurring" value={fmt(totalMonthly)} color={C.green} icon="🔄"
+          subtitle={`${otherIncome.filter(i => i.enabled && i.type === "monthly").length} active streams`} />
+        <KPICard label="One-Off Income" value={fmt(totalOneOff)} color={C.cyan} icon="💷"
+          subtitle={`${otherIncome.filter(i => i.enabled && i.type === "one-off").length} items`} />
+        <KPICard label="Annual (Recurring)" value={fmtK(totalMonthly * 12)} color={C.purple} icon="📅"
+          subtitle="Recurring only" />
+      </div>
+
+      <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Income Streams (non-show)</span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <AddButton label="+ One-off" onClick={() => addItem("one-off")} style={{ fontSize: 11, padding: "4px 10px" }} />
+            <AddButton label="+ Monthly" onClick={() => addItem("monthly")} style={{ fontSize: 11, padding: "4px 10px" }} />
+          </div>
+        </div>
+        {otherIncome.length === 0 ? (
+          <div style={{ padding: 30, textAlign: "center", color: C.textDim }}>
+            No other income sources yet. Add grants, workshops, equipment hire, sponsorships, etc.
+          </div>
+        ) : (
+          <div style={{ padding: "4px 16px 12px" }}>
+            {otherIncome.map(item => (
+              <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "8px 0", borderBottom: `1px solid ${C.border}11`, opacity: item.enabled ? 1 : 0.5 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                  <Toggle on={item.enabled} onChange={() => toggleItem(item.id)} size="sm" />
+                  <EditableText value={item.name} onChange={v => updateItem(item.id, "name", v)}
+                    style={{ fontSize: 13, color: C.text, fontWeight: 600 }} />
+                  {item.type === "one-off" ? (
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <select value={item.month} onChange={e => updateItem(item.id, "month", e.target.value)}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={item.year} onChange={e => updateItem(item.id, "year", parseInt(e.target.value))}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {[2026,2027,2028].map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: C.textDim }}>from</span>
+                      <select value={item.startMonth} onChange={e => updateItem(item.id, "startMonth", e.target.value)}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={item.startYear} onChange={e => updateItem(item.id, "startYear", parseInt(e.target.value))}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 2px", fontSize: 10 }}>
+                        {[2026,2027,2028].map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {item.note && <span style={{ fontSize: 10, color: C.textDim, fontStyle: "italic" }}>({item.note})</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontWeight: 700, color: C.green, fontSize: 13 }}>
+                    <EditableCell value={item.amount} onChange={v => updateItem(item.id, "amount", v)} />
+                  </span>
+                  <span style={{ fontSize: 10, color: C.textDim, padding: "1px 6px", borderRadius: 3,
+                    background: item.type === "one-off" ? C.blueBg : C.greenBg }}>
+                    {item.type === "one-off" ? "one-off" : "/mo"}
+                  </span>
+                  <select value={item.type} onChange={e => updateItem(item.id, "type", e.target.value)}
+                    style={{ background: C.bg, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 4px", fontSize: 10 }}>
+                    <option value="one-off">one-off</option>
+                    <option value="monthly">monthly</option>
+                  </select>
+                  <IconBtn icon="✕" onClick={() => removeItem(item.id)} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── VAT & TAX ───────────────────────────────────────────
+function VATPage({ data, vatSettings }) {
+  // Calculate quarterly VAT
+  const vatQuarters = {};
+  data.forEach(d => {
+    const qi = Math.floor(d.monthIdx / 3) + 1;
+    const qk = `Q${qi} ${d.year}`;
+    if (!vatQuarters[qk]) vatQuarters[qk] = { income: 0, costs: 0, label: qk, months: [] };
+    vatQuarters[qk].income += d.income;
+    vatQuarters[qk].costs += d.totalCosts;
+    vatQuarters[qk].months.push(d.label);
+  });
+
+  const vatData = Object.values(vatQuarters).map(q => {
+    const vatOnSales = q.income * vatSettings.rate;
+    const vatOnPurchases = q.costs * vatSettings.reclaimRate;
+    const vatDue = vatOnSales - vatOnPurchases;
+    return { ...q, vatOnSales, vatOnPurchases, vatDue };
+  });
+
+  const totalVatDue = vatData.reduce((s, q) => s + q.vatDue, 0);
+
+  return (
+    <div>
+      {/* VAT Settings */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16,
+        border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>VAT Settings</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>VAT Rate</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.accent }}>{(vatSettings.rate * 100).toFixed(0)}%</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Payment Frequency</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Quarterly</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Payment Delay</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>1 month after quarter end</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Total VAT Forecast</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.red }}>{fmtK(totalVatDue)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* VAT Breakdown */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16,
+        border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Quarterly VAT Summary</div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              {["Quarter", "Income", "VAT on Sales", "VAT on Purchases", "VAT Due", "Payment Month"].map((h, i) => (
+                <th key={i} style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : "right",
+                  fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {vatData.map((q, i) => (
+              <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                <td style={{ padding: "10px 12px", fontWeight: 600, color: C.text, fontSize: 13 }}>{q.label}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", color: C.green, fontSize: 13 }}>{fmt(q.income)}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", color: C.red, fontSize: 13 }}>{fmt(q.vatOnSales)}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", color: C.green, fontSize: 13 }}>{fmt(q.vatOnPurchases)}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700,
+                  color: q.vatDue > 0 ? C.red : C.green, fontSize: 13 }}>{fmt(q.vatDue)}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", color: C.textMuted, fontSize: 12 }}>
+                  {q.months.length > 0 ? `+1mo after ${q.months[q.months.length - 1]}` : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* VAT Chart */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>VAT Cashflow Impact</div>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={vatData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+            <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
+            <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
+            <Tooltip content={<ChartTooltip />} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="vatOnSales" name="VAT Collected" fill={C.red} opacity={0.7} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="vatOnPurchases" name="VAT Reclaimable" fill={C.green} opacity={0.7} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="vatDue" name="Net VAT Due" fill={C.orange} opacity={0.8} radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// ─── MONTHLY DETAIL ──────────────────────────────────────
+function MonthlyDetailPage({ data }) {
+  return (
+    <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1050 }}>
+        <thead>
+          <tr style={{ borderBottom: `2px solid ${C.border}` }}>
+            {["Month", "Season", "Shows", "Show Income", "Other", "Total In", "Fixed Costs", "Projects", "VAT", "Total Out", "Net", "Balance"].map((h, i) => (
+              <th key={i} style={{ padding: "10px 12px", textAlign: i <= 1 ? "left" : "right",
+                fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: 0.5,
+                position: "sticky", top: 0, background: C.surface, zIndex: 1 }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d, i) => {
+            const net = d.income - d.totalCosts;
+            const isQuarterEnd = (d.monthIdx + 1) % 3 === 0;
+            return (
+              <tr key={i} style={{ borderBottom: isQuarterEnd ? `2px solid ${C.border}` : `1px solid ${C.border}22`,
+                background: isQuarterEnd ? C.surfaceLight + "22" : "transparent" }}>
+                <td style={{ padding: "8px 12px", fontWeight: 600, color: C.text, fontSize: 13 }}>{d.label}</td>
+                <td style={{ padding: "8px 12px" }}>
+                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3,
+                    background: SEASONAL[d.monthIdx]?.note === "Peak" ? C.greenBg :
+                      SEASONAL[d.monthIdx]?.note === "Quiet" ? C.redBg : C.yellowBg,
+                    color: SEASONAL[d.monthIdx]?.note === "Peak" ? C.green :
+                      SEASONAL[d.monthIdx]?.note === "Quiet" ? C.red : C.accent }}>
+                    {SEASONAL[d.monthIdx]?.note}
+                  </span>
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.textMuted, fontSize: 12 }}>{d.showCount || "—"}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.green }}>{fmt(d.income - (d.otherIncome || 0))}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.cyan }}>{d.otherIncome > 0 ? fmt(d.otherIncome) : "—"}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.green, fontWeight: 600 }}>{fmt(d.income)}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.red }}>{fmt(d.fixedCosts)}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.orange }}>{d.projectCosts > 0 ? fmt(d.projectCosts) : "—"}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.purple }}>{d.vatPayment > 0 ? fmt(d.vatPayment) : "—"}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", color: C.red, fontWeight: 600 }}>{fmt(d.totalCosts)}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700,
+                  color: net >= 0 ? C.green : C.red }}>{fmt(net)}</td>
+                <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, fontSize: 13 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                    <HealthDot value={d.balance} />
+                    <span style={{ color: d.balance >= 0 ? C.text : C.red }}>{fmt(d.balance)}</span>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── SCENARIOS ───────────────────────────────────────────
+function ScenariosPage({ shows, costGroups, projects, otherIncome, openingBalance, monthRange, vatSettings }) {
+  const scenarioResults = {};
+  Object.entries(SCENARIOS).forEach(([key, sc]) => {
+    let balance = openingBalance;
+    let vatAcc = 0;
+    const sdata = monthRange.map((mr) => {
+      const mi = monthIndex(mr.month);
+      const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
+      let oiTotal = 0;
+      otherIncome.filter(oi => oi.enabled).forEach(oi => {
+        if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) oiTotal += oi.amount;
+        if (oi.type === "monthly") { const sk = monthKey(oi.startMonth, oi.startYear); if (mr.key >= sk) oiTotal += oi.amount; }
+      });
+      const income = (monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0) + oiTotal) * sc.incMult;
+      const fixedCosts = costGroups.filter(g => g.enabled).reduce((s, g) =>
+        s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0) * sc.costMult;
+      let projectCosts = 0;
+      projects.filter(p => p.enabled).forEach(p => {
+        p.items.forEach(item => {
+          if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) projectCosts += item.amount;
+          if (item.type === "monthly") {
+            const startK = monthKey(item.startMonth, item.startYear);
+            if (mr.key >= startK) projectCosts += item.amount;
+          }
+        });
+      });
+      const vatCollected = income * vatSettings.rate;
+      const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
+      vatAcc += vatCollected - vatOnPurchases;
+      let vatPayment = 0;
+      if ([0, 3, 6, 9].includes(mi)) { vatPayment = Math.max(vatAcc, 0); vatAcc = 0; }
+      const totalCosts = fixedCosts + projectCosts + vatPayment;
+      balance += income - totalCosts;
+      return { ...mr, monthIdx: mi, income, totalCosts, balance };
+    });
+    scenarioResults[key] = sdata;
+  });
+
+  // Combine for chart
+  const chartData = monthRange.map((mr, i) => ({
+    label: mr.label,
+    expected: scenarioResults.expected[i]?.balance || 0,
+    optimistic: scenarioResults.optimistic[i]?.balance || 0,
+    pessimistic: scenarioResults.pessimistic[i]?.balance || 0,
+  }));
+
+  return (
+    <div>
+      {/* Scenario Comparison Cards */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        {Object.entries(SCENARIOS).map(([key, sc]) => {
+          const results = scenarioResults[key];
+          const lastBalance = results[results.length - 1]?.balance || 0;
+          const totalIncome = results.reduce((s, d) => s + d.income, 0);
+          const lowest = Math.min(...results.map(d => d.balance));
+          return (
+            <div key={key} style={{ flex: 1, background: C.surface, borderRadius: 10, padding: 16,
+              border: `2px solid ${sc.color}44` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: sc.color }} />
+                <span style={{ fontSize: 14, fontWeight: 700, color: sc.color }}>{sc.label}</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>End Balance</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: lastBalance >= 0 ? sc.color : C.red }}>{fmtK(lastBalance)}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+                Income: {fmtK(totalIncome)} · Lowest: {fmtK(lowest)}
+              </div>
+              <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>
+                Income {sc.incMult > 1 ? "+" : ""}{((sc.incMult - 1) * 100).toFixed(0)}% ·
+                Costs {sc.costMult > 1 ? "+" : ""}{((sc.costMult - 1) * 100).toFixed(0)}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scenario Chart */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Balance Projection — All Scenarios</div>
+        <ResponsiveContainer width="100%" height={350}>
+          <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+            <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
+            <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
+            <Tooltip content={<ChartTooltip />} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Area dataKey="optimistic" name="Optimistic" type="monotone"
+              fill={C.green} fillOpacity={0.1} stroke={C.green} strokeWidth={2} strokeDasharray="6 3" />
+            <Area dataKey="pessimistic" name="Pessimistic" type="monotone"
+              fill={C.red} fillOpacity={0.1} stroke={C.red} strokeWidth={2} strokeDasharray="6 3" />
+            <Line dataKey="expected" name="Expected" type="monotone"
+              stroke={C.blue} strokeWidth={3} dot={false} />
+            <ReferenceLine y={0} stroke={C.red} strokeDasharray="4 4" strokeOpacity={0.6} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════
+function SparkCashflow() {
+  const [page, setPage] = useState("dashboard");
+  const [scenario, setScenario] = useState("expected");
+  const [timeframe, setTimeframe] = useState(12);
+  const [openingBalance, setOpeningBalance] = useState(DEFAULT_OPENING_BALANCE);
+  const [shows, setShows] = useState(DEFAULT_SHOWS);
+  const [costGroups, setCostGroups] = useState(DEFAULT_COST_GROUPS);
+  const [projects, setProjects] = useState(DEFAULT_PROJECTS);
+  const [otherIncome, setOtherIncome] = useState(DEFAULT_OTHER_INCOME);
+  const [vatSettings] = useState({ rate: 0.20, reclaimRate: 0.05, paymentDelay: 1 });
+
+  // Generate month range
+  const monthRange = useMemo(() => generateMonthRange(2026, 0, timeframe), [timeframe]);
+
+  // Core calculation
+  const data = useMemo(() => {
+    const sc = SCENARIOS[scenario];
+    let balance = openingBalance;
+    let vatAccumulator = 0;
+
+    return monthRange.map((mr) => {
+      const mi = monthIndex(mr.month);
+
+      // Show income
+      const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
+      const rawShowIncome = monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0);
+
+      // Other income
+      let otherIncomeTotal = 0;
+      otherIncome.filter(oi => oi.enabled).forEach(oi => {
+        if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) otherIncomeTotal += oi.amount;
+        if (oi.type === "monthly") {
+          const startK = monthKey(oi.startMonth, oi.startYear);
+          if (mr.key >= startK) otherIncomeTotal += oi.amount;
+        }
+      });
+
+      const income = (rawShowIncome + otherIncomeTotal) * sc.incMult;
+
+      // Fixed costs
+      const rawFixed = costGroups.filter(g => g.enabled).reduce((s, g) =>
+        s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
+      const fixedCosts = rawFixed * sc.costMult;
+
+      // Project costs
+      let projectCosts = 0;
+      projects.filter(p => p.enabled).forEach(p => {
+        p.items.forEach(item => {
+          if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) {
+            projectCosts += item.amount;
+          }
+          if (item.type === "monthly") {
+            const startK = monthKey(item.startMonth, item.startYear);
+            if (mr.key >= startK) projectCosts += item.amount;
+          }
+        });
+      });
+
+      // VAT — simplified: collect on income, pay quarterly with 1 month delay
+      const vatCollected = income * vatSettings.rate;
+      const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
+      vatAccumulator += vatCollected - vatOnPurchases;
+
+      let vatPayment = 0;
+      // Pay VAT one month after quarter end (quarters: Mar, Jun, Sep, Dec → pay Apr, Jul, Oct, Jan)
+      if ([0, 3, 6, 9].includes(mi)) { // Jan, Apr, Jul, Oct
+        vatPayment = Math.max(vatAccumulator, 0);
+        vatAccumulator = 0;
+      }
+
+      const totalCosts = fixedCosts + projectCosts + vatPayment;
+      balance += income - totalCosts;
+
+      return {
+        ...mr, monthIdx: mi, income, fixedCosts, projectCosts, vatPayment, totalCosts, balance,
+        showCount: monthShows.length, otherIncome: otherIncomeTotal,
+      };
+    });
+  }, [shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings]);
+
+  // Page title
+  const pageTitle = NAV_ITEMS.find(n => n.id === page)?.label || "Dashboard";
+
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", background: C.bg, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: C.text }}>
+      <Sidebar active={page} onNav={setPage} scenario={scenario} onScenario={setScenario}
+        timeframe={timeframe} onTimeframe={setTimeframe} />
+
+      {/* Main Content */}
+      <div style={{ flex: 1, marginLeft: 220, padding: "20px 28px", maxWidth: 1200 }}>
+        {/* Top Bar */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.text }}>{pageTitle}</h1>
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {SCENARIOS[scenario].label} scenario · {timeframe} months from Jan 2026
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ background: C.surface, borderRadius: 8, padding: "8px 14px",
+              border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: C.textMuted }}>Opening Balance</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
+                <EditableCell value={openingBalance} onChange={setOpeningBalance} />
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Content */}
+        {page === "dashboard" && <DashboardPage data={data} openingBalance={openingBalance} scenario={scenario} />}
+        {page === "pipeline" && <PipelinePage shows={shows} setShows={setShows} />}
+        {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} />}
+        {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
+        {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} />}
+        {page === "vat" && <VATPage data={data} vatSettings={vatSettings} />}
+        {page === "monthly" && <MonthlyDetailPage data={data} />}
+        {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
+          otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings} />}
+      </div>
+    </div>
+  );
+}
+
+    // ═══════════════════════════════════════════════════════════
+    // API HELPERS
+    // ═══════════════════════════════════════════════════════════
+    const API = {
+      async checkAuth() {
+        try {
+          const r = await fetch('/api/auth.php');
+          const d = await r.json();
+          return d.authenticated === true;
+        } catch { return false; }
+      },
+      async login(username, password) {
+        const r = await fetch('/api/auth.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        return r.ok;
+      },
+      async loadData() {
+        try {
+          const r = await fetch('/api/api.php');
+          if (!r.ok) return null;
+          const d = await r.json();
+          return d.success && d.data && !d.data._initialized ? d.data : null;
+        } catch { return null; }
+      },
+      async saveData(data) {
+        const r = await fetch('/api/api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data })
+        });
+        return r.ok;
+      }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // LOGIN SCREEN
+    // ═══════════════════════════════════════════════════════════
+    function LoginScreen({ onLogin }) {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        const ok = await API.login(username, password);
+        if (ok) { onLogin(); }
+        else { setError('Wrong username or password'); setLoading(false); }
+      };
+
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh',
+          background: '#0f172a' }}>
+          <form onSubmit={handleSubmit} style={{ background: '#1e293b', borderRadius: 12, padding: '40px 32px',
+            border: '1px solid #475569', width: 340, textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>⚡</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b', marginBottom: 4 }}>SPARK!</div>
+            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase',
+              letterSpacing: 1, marginBottom: 24 }}>Cashflow Forecaster</div>
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+              placeholder="Username" autoFocus autoComplete="username"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #475569',
+                background: '#0f172a', color: '#f1f5f9', fontSize: 14, outline: 'none', marginBottom: 12 }} />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="Password" autoComplete="current-password"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #475569',
+                background: '#0f172a', color: '#f1f5f9', fontSize: 14, outline: 'none', marginBottom: 12 }} />
+            {error && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8 }}>{error}</div>}
+            <button type="submit" disabled={loading}
+              style={{ width: '100%', padding: '10px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: '#f59e0b', color: '#0f172a', fontSize: 14, fontWeight: 700,
+                opacity: loading ? 0.6 : 1 }}>
+              {loading ? 'Logging in...' : 'Log In'}
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SAVE STATUS INDICATOR
+    // ═══════════════════════════════════════════════════════════
+    function SaveIndicator({ status }) {
+      const colors = { idle: '#64748b', saving: '#f59e0b', saved: '#22c55e', error: '#ef4444' };
+      const labels = { idle: '', saving: 'Saving...', saved: 'Saved', error: 'Save failed' };
+      if (status === 'idle') return null;
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
+          fontSize: 10, color: colors[status], fontWeight: 600 }}>
+          {status === 'saving' && <span style={{ display: 'inline-block', width: 8, height: 8,
+            border: '2px solid #f59e0b', borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'spin 0.6s linear infinite' }} />}
+          {status === 'saved' && '✓'}
+          {status === 'error' && '✕'}
+          {labels[status]}
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SAVE-AWARE WRAPPER
+    // ═══════════════════════════════════════════════════════════
+    function SparkCashflowWithSave() {
+      const loaded = window.__SPARK_INITIAL_DATA || null;
+
+      const [page, setPage] = useState("dashboard");
+      const [scenario, setScenario] = useState("expected");
+      const [timeframe, setTimeframe] = useState(loaded?.timeframe || 12);
+      const [openingBalance, setOpeningBalance] = useState(loaded?.openingBalance ?? DEFAULT_OPENING_BALANCE);
+      const [shows, setShows] = useState(loaded?.shows || DEFAULT_SHOWS);
+      const [costGroups, setCostGroups] = useState(loaded?.costGroups || DEFAULT_COST_GROUPS);
+      const [projects, setProjects] = useState(loaded?.projects || DEFAULT_PROJECTS);
+      const [otherIncome, setOtherIncome] = useState(loaded?.otherIncome || DEFAULT_OTHER_INCOME);
+      const [vatSettings] = useState(loaded?.vatSettings || { rate: 0.20, reclaimRate: 0.05, paymentDelay: 1 });
+      const [saveStatus, setSaveStatus] = useState('idle');
+
+      // Auto-save with debounce
+      const saveTimer = useRef(null);
+      const isFirstRender = useRef(true);
+
+      useEffect(() => {
+        if (isFirstRender.current) { isFirstRender.current = false; return; }
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        setSaveStatus('saving');
+        saveTimer.current = setTimeout(async () => {
+          const ok = await API.saveData({
+            openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe,
+            savedAt: new Date().toISOString()
+          });
+          setSaveStatus(ok ? 'saved' : 'error');
+          if (ok) setTimeout(() => setSaveStatus('idle'), 2000);
+        }, 2000);
+        return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+      }, [openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe]);
+
+      // Generate month range
+      const monthRange = useMemo(() => generateMonthRange(2026, 0, timeframe), [timeframe]);
+
+      // Core calculation
+      const data = useMemo(() => {
+        const sc = SCENARIOS[scenario];
+        let balance = openingBalance;
+        let vatAccumulator = 0;
+
+        return monthRange.map((mr) => {
+          const mi = monthIndex(mr.month);
+          const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
+          const rawShowIncome = monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0);
+          let otherIncomeTotal = 0;
+          otherIncome.filter(oi => oi.enabled).forEach(oi => {
+            if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) otherIncomeTotal += oi.amount;
+            if (oi.type === "monthly") {
+              const startK = monthKey(oi.startMonth, oi.startYear);
+              if (mr.key >= startK) otherIncomeTotal += oi.amount;
+            }
+          });
+          const income = (rawShowIncome + otherIncomeTotal) * sc.incMult;
+          const rawFixed = costGroups.filter(g => g.enabled).reduce((s, g) =>
+            s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
+          const fixedCosts = rawFixed * sc.costMult;
+          let projectCosts = 0;
+          projects.filter(p => p.enabled).forEach(p => {
+            p.items.forEach(item => {
+              if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) projectCosts += item.amount;
+              if (item.type === "monthly") {
+                const startK = monthKey(item.startMonth, item.startYear);
+                if (mr.key >= startK) projectCosts += item.amount;
+              }
+            });
+          });
+          const vatCollected = income * vatSettings.rate;
+          const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
+          vatAccumulator += vatCollected - vatOnPurchases;
+          let vatPayment = 0;
+          if ([0, 3, 6, 9].includes(mi)) { vatPayment = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
+          const totalCosts = fixedCosts + projectCosts + vatPayment;
+          balance += income - totalCosts;
+          return { ...mr, monthIdx: mi, income, fixedCosts, projectCosts, vatPayment, totalCosts, balance,
+            showCount: monthShows.length, otherIncome: otherIncomeTotal };
+        });
+      }, [shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings]);
+
+      const pageTitle = NAV_ITEMS.find(n => n.id === page)?.label || "Dashboard";
+
+      return (
+        <div style={{ display: "flex", minHeight: "100vh", background: C.bg, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: C.text }}>
+          <div style={{ width: 220, background: C.sidebar, borderRight: `1px solid ${C.border}`,
+            display: "flex", flexDirection: "column", height: "100vh", position: "fixed", left: 0, top: 0, zIndex: 100 }}>
+            <div style={{ padding: "20px 16px 12px", borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: C.accent, letterSpacing: -0.5 }}>SPARK!</div>
+                  <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Cashflow Forecaster</div>
+                </div>
+              </div>
+              <SaveIndicator status={saveStatus} />
+            </div>
+            <div style={{ flex: 1, padding: "8px 8px", overflowY: "auto" }}>
+              {NAV_ITEMS.map(item => (
+                <div key={item.id} onClick={() => setPage(item.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8,
+                    cursor: "pointer", marginBottom: 2, fontSize: 13, fontWeight: page === item.id ? 700 : 500,
+                    color: page === item.id ? C.text : C.textMuted,
+                    background: page === item.id ? C.sidebarActive : "transparent",
+                    transition: "all 0.15s" }}
+                  onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.background = C.sidebarHover; }}
+                  onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.background = "transparent"; }}>
+                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: "12px", borderTop: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Scenario</div>
+              {Object.entries(SCENARIOS).map(([key, sc]) => (
+                <div key={key} onClick={() => setScenario(key)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
+                    cursor: "pointer", marginBottom: 2, fontSize: 12,
+                    background: scenario === key ? `${sc.color}22` : "transparent",
+                    color: scenario === key ? sc.color : C.textMuted,
+                    fontWeight: scenario === key ? 700 : 500 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: sc.color, opacity: scenario === key ? 1 : 0.4 }} />
+                  {sc.label}
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: "0 12px 16px" }}>
+              <div style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Timeframe</div>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[6, 12, 24].map(t => (
+                  <button key={t} onClick={() => setTimeframe(t)}
+                    style={{ flex: 1, padding: "5px 0", borderRadius: 5, border: "none", cursor: "pointer",
+                      fontSize: 11, fontWeight: 700,
+                      background: timeframe === t ? C.accent : C.surfaceLight,
+                      color: timeframe === t ? C.bg : C.textMuted }}>
+                    {t}m
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, marginLeft: 220, padding: "20px 28px", maxWidth: 1200 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div>
+                <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.text }}>{pageTitle}</h1>
+                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                  {SCENARIOS[scenario].label} scenario · {timeframe} months from Jan 2026
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ background: C.surface, borderRadius: 8, padding: "8px 14px",
+                  border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11, color: C.textMuted }}>Opening Balance</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
+                    <EditableCell value={openingBalance} onChange={setOpeningBalance} />
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {page === "dashboard" && <DashboardPage data={data} openingBalance={openingBalance} scenario={scenario} />}
+            {page === "pipeline" && <PipelinePage shows={shows} setShows={setShows} />}
+            {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} />}
+            {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
+            {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} />}
+            {page === "vat" && <VATPage data={data} vatSettings={vatSettings} />}
+            {page === "monthly" && <MonthlyDetailPage data={data} />}
+            {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
+              otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings} />}
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // APP WRAPPER (Auth + Loading)
+    // ═══════════════════════════════════════════════════════════
+    function AppWrapper() {
+      const [authState, setAuthState] = useState('checking'); // checking, login, ready
+
+      useEffect(() => {
+        API.checkAuth().then(authed => {
+          if (authed) {
+            API.loadData().then(data => {
+              if (data) {
+                window.__SPARK_INITIAL_DATA = data;
+              }
+              setAuthState('ready');
+            });
+          } else {
+            setAuthState('login');
+          }
+        });
+      }, []);
+
+      const handleLogin = () => {
+        API.loadData().then(data => {
+          if (data) {
+            window.__SPARK_INITIAL_DATA = data;
+          }
+          setAuthState('ready');
+        });
+      };
+
+      if (authState === 'checking') {
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh',
+            background: '#0f172a', color: '#94a3b8', fontSize: 14 }}>
+            <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #f59e0b',
+              borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite',
+              marginRight: 8 }} /> Loading...
+          </div>
+        );
+      }
+
+      if (authState === 'login') {
+        return <LoginScreen onLogin={handleLogin} />;
+      }
+
+      return <SparkCashflowWithSave />;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MOUNT
+    // ═══════════════════════════════════════════════════════════
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<AppWrapper />);
+  </script>
+</body>
+</html>
