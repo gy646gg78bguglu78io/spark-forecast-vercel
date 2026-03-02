@@ -2,14 +2,18 @@
 // Database helper — Neon Serverless Postgres
 // ═══════════════════════════════════════════════════════════
 // Auto-creates the forecast_data table on first use.
-// Set DATABASE_URL env var (auto-injected by Neon integration).
+// DATABASE_URL is auto-injected by the Neon integration.
 
 const { neon } = require('@neondatabase/serverless');
 
 let tableReady = false;
 
 function getSQL() {
-  return neon(process.env.DATABASE_URL);
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error('DATABASE_URL is not set — add a Neon Postgres store to this Vercel project');
+  }
+  return neon(url);
 }
 
 async function ensureTable() {

@@ -19,8 +19,16 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  await ensureTable();
-  const sql = getSQL();
+  // ─── DB init ──────────────────────────────────────────
+  let sql;
+  try {
+    await ensureTable();
+    sql = getSQL();
+  } catch (err) {
+    console.error('DB connection error:', err.message);
+    return res.status(500).json({ error: 'Database connection failed: ' + err.message });
+  }
+
   const method = req.method;
 
   // ─── GET — load data ──────────────────────────────────
@@ -56,7 +64,7 @@ module.exports = async function handler(req, res) {
       return res.json({ success: true, data: null, updated_at: null });
     } catch (err) {
       console.error('DB read error:', err.message);
-      return res.status(500).json({ error: 'Database read failed' });
+      return res.status(500).json({ error: 'Database read failed: ' + err.message });
     }
   }
 
@@ -90,7 +98,7 @@ module.exports = async function handler(req, res) {
       });
     } catch (err) {
       console.error('DB write error:', err.message);
-      return res.status(500).json({ error: 'Database write failed' });
+      return res.status(500).json({ error: 'Database write failed: ' + err.message });
     }
   }
 
