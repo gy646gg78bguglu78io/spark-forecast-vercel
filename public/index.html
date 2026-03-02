@@ -80,29 +80,29 @@ const DEFAULT_OPENING_BALANCE = 112250;
 const VAT_RATE = 0.20;
 
 const DEFAULT_SHOWS = [
-  { id: 1, name: "NYE Dubai", month: "Jan", year: 2026, fee: 8500, status: "confirmed", days: 3 },
-  { id: 2, name: "Winter Lights Festival", month: "Jan", year: 2026, fee: 4200, status: "confirmed", days: 2 },
-  { id: 3, name: "Burns Night Glasgow", month: "Jan", year: 2026, fee: 3800, status: "confirmed", days: 1 },
-  { id: 4, name: "Lumiere Durham", month: "Feb", year: 2026, fee: 6500, status: "confirmed", days: 3 },
-  { id: 5, name: "Chinese New Year Liverpool", month: "Feb", year: 2026, fee: 4800, status: "confirmed", days: 2 },
-  { id: 6, name: "St David's Day Cardiff", month: "Mar", year: 2026, fee: 3500, status: "confirmed", days: 1 },
-  { id: 7, name: "Corporate - Deloitte", month: "Mar", year: 2026, fee: 7200, status: "confirmed", days: 1 },
-  { id: 8, name: "Easter Event Manchester", month: "Apr", year: 2026, fee: 3200, status: "likely", days: 1 },
-  { id: 9, name: "Council Lights Birmingham", month: "May", year: 2026, fee: 4500, status: "likely", days: 2 },
-  { id: 10, name: "Corporate - HSBC", month: "Jun", year: 2026, fee: 5500, status: "hoped", days: 1 },
-  { id: 11, name: "Festival Gig", month: "Jul", year: 2026, fee: 2800, status: "hoped", days: 2 },
-  { id: 12, name: "Edinburgh Fringe", month: "Aug", year: 2026, fee: 4000, status: "hoped", days: 3 },
-  { id: 13, name: "Blackpool Illuminations", month: "Sep", year: 2026, fee: 5200, status: "likely", days: 2 },
-  { id: 14, name: "Halloween Spectacular", month: "Oct", year: 2026, fee: 12000, status: "likely", days: 4 },
-  { id: 15, name: "Diwali Leicester", month: "Oct", year: 2026, fee: 5500, status: "likely", days: 2 },
-  { id: 16, name: "Bonfire Night Leeds", month: "Nov", year: 2026, fee: 6800, status: "likely", days: 2 },
-  { id: 17, name: "Xmas Lights - Newcastle", month: "Nov", year: 2026, fee: 8500, status: "likely", days: 3 },
-  { id: 18, name: "Xmas Lights - Manchester", month: "Nov", year: 2026, fee: 9200, status: "confirmed", days: 3 },
-  { id: 19, name: "Xmas Parade Liverpool", month: "Dec", year: 2026, fee: 7500, status: "confirmed", days: 2 },
-  { id: 20, name: "NYE London", month: "Dec", year: 2026, fee: 15000, status: "hoped", days: 2 },
-  { id: 21, name: "Corporate Christmas x3", month: "Dec", year: 2026, fee: 18000, status: "likely", days: 3 },
-  { id: 22, name: "Shopping Centre Xmas", month: "Dec", year: 2026, fee: 6000, status: "likely", days: 4 },
-  { id: 23, name: "Hogmanay Edinburgh", month: "Dec", year: 2026, fee: 8000, status: "hoped", days: 2 },
+  { id: 1, name: "NYE Dubai", date: "2026-01-03", month: "Jan", year: 2026, fee: 8500, status: "confirmed", days: 3 },
+  { id: 2, name: "Winter Lights Festival", date: "2026-01-17", month: "Jan", year: 2026, fee: 4200, status: "confirmed", days: 2 },
+  { id: 3, name: "Burns Night Glasgow", date: "2026-01-25", month: "Jan", year: 2026, fee: 3800, status: "confirmed", days: 1 },
+  { id: 4, name: "Lumiere Durham", date: "2026-02-12", month: "Feb", year: 2026, fee: 6500, status: "confirmed", days: 3 },
+  { id: 5, name: "Chinese New Year Liverpool", date: "2026-02-17", month: "Feb", year: 2026, fee: 4800, status: "confirmed", days: 2 },
+  { id: 6, name: "St David's Day Cardiff", date: "2026-03-01", month: "Mar", year: 2026, fee: 3500, status: "confirmed", days: 1 },
+  { id: 7, name: "Corporate - Deloitte", date: "2026-03-20", month: "Mar", year: 2026, fee: 7200, status: "confirmed", days: 1 },
+  { id: 8, name: "Easter Event Manchester", date: "2026-04-05", month: "Apr", year: 2026, fee: 3200, status: "likely", days: 1 },
+  { id: 9, name: "Council Lights Birmingham", date: "2026-05-15", month: "May", year: 2026, fee: 4500, status: "likely", days: 2 },
+  { id: 10, name: "Corporate - HSBC", date: "2026-06-12", month: "Jun", year: 2026, fee: 5500, status: "hoped", days: 1 },
+  { id: 11, name: "Festival Gig", date: "2026-07-18", month: "Jul", year: 2026, fee: 2800, status: "hoped", days: 2 },
+  { id: 12, name: "Edinburgh Fringe", date: "2026-08-08", month: "Aug", year: 2026, fee: 4000, status: "hoped", days: 3 },
+  { id: 13, name: "Blackpool Illuminations", date: "2026-09-04", month: "Sep", year: 2026, fee: 5200, status: "likely", days: 2 },
+  { id: 14, name: "Halloween Spectacular", date: "2026-10-28", month: "Oct", year: 2026, fee: 12000, status: "likely", days: 4 },
+  { id: 15, name: "Diwali Leicester", date: "2026-10-14", month: "Oct", year: 2026, fee: 5500, status: "likely", days: 2 },
+  { id: 16, name: "Bonfire Night Leeds", date: "2026-11-05", month: "Nov", year: 2026, fee: 6800, status: "likely", days: 2 },
+  { id: 17, name: "Xmas Lights - Newcastle", date: "2026-11-14", month: "Nov", year: 2026, fee: 8500, status: "likely", days: 3 },
+  { id: 18, name: "Xmas Lights - Manchester", date: "2026-11-21", month: "Nov", year: 2026, fee: 9200, status: "confirmed", days: 3 },
+  { id: 19, name: "Xmas Parade Liverpool", date: "2026-12-05", month: "Dec", year: 2026, fee: 7500, status: "confirmed", days: 2 },
+  { id: 20, name: "NYE London", date: "2026-12-31", month: "Dec", year: 2026, fee: 15000, status: "hoped", days: 2 },
+  { id: 21, name: "Corporate Christmas x3", date: "2026-12-12", month: "Dec", year: 2026, fee: 18000, status: "likely", days: 3 },
+  { id: 22, name: "Shopping Centre Xmas", date: "2026-12-18", month: "Dec", year: 2026, fee: 6000, status: "likely", days: 4 },
+  { id: 23, name: "Hogmanay Edinburgh", date: "2026-12-31", month: "Dec", year: 2026, fee: 8000, status: "hoped", days: 2 },
 ];
 
 const DEFAULT_COST_GROUPS = [
@@ -244,6 +244,28 @@ const fmtK = (n) => {
 
 const monthIndex = (m) => MONTHS.indexOf(m);
 const monthKey = (m, y) => `${y}-${String(MONTHS.indexOf(m) + 1).padStart(2, "0")}`;
+
+// Date helpers for show pipeline
+function formatDateUK(dateStr) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function migrateShowDates(shows) {
+  return shows.map(s => {
+    if (s.date) return s;
+    const mi = MONTHS.indexOf(s.month);
+    const y = s.year || 2026;
+    const m = mi >= 0 ? mi : 0;
+    return { ...s, date: `${y}-${String(m + 1).padStart(2, '0')}-15` };
+  });
+}
+
+// UK VAT quarter helpers
+const VAT_QUARTER_END_MONTHS = [2, 5, 8, 11]; // Mar, Jun, Sep, Dec
+const VAT_PAYMENT_MONTHS = [4, 7, 10, 1]; // May, Aug, Nov, Feb (1mo+7d after quarter end)
+const VAT_PAYMENT_LABELS = { 2: "7 May", 5: "7 Aug", 8: "7 Nov", 11: "7 Feb" };
 
 function generateMonthRange(startYear, startMonth, count) {
   const result = [];
@@ -615,18 +637,28 @@ function PipelinePage({ shows, setShows }) {
   const nextId = Math.max(...shows.map(s => s.id), 0) + 1;
 
   const addShow = () => {
-    setShows([...shows, { id: nextId, name: "New Show", month: "Jan", year: 2026, fee: 3000, status: "hoped", days: 1 }]);
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setShows([...shows, { id: nextId, name: "New Show", date: dateStr, month: MONTHS[today.getMonth()], year: today.getFullYear(), fee: 3000, status: "hoped", days: 1 }]);
   };
 
   const updateShow = (id, field, value) => {
-    setShows(shows.map(s => s.id === id ? { ...s, [field]: field === "fee" || field === "days" ? (parseFloat(value) || 0) : value } : s));
+    setShows(shows.map(s => {
+      if (s.id !== id) return s;
+      if (field === "date") {
+        const d = new Date(value + 'T00:00:00');
+        return { ...s, date: value, month: MONTHS[d.getMonth()], year: d.getFullYear() };
+      }
+      if (field === "fee" || field === "days") return { ...s, [field]: parseFloat(value) || 0 };
+      return { ...s, [field]: value };
+    }));
   };
 
   const removeShow = (id) => setShows(shows.filter(s => s.id !== id));
 
   const filtered = shows.filter(s => filter === "all" || s.status === filter);
   const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === "date") return (a.year * 12 + monthIndex(a.month)) - (b.year * 12 + monthIndex(b.month));
+    if (sortBy === "date") return (a.date || "").localeCompare(b.date || "");
     if (sortBy === "fee") return b.fee - a.fee;
     return 0;
   });
@@ -697,16 +729,9 @@ function PipelinePage({ shows, setShows }) {
                     style={{ fontSize: 13, fontWeight: 600, color: C.text }} />
                 </td>
                 <td style={{ padding: "8px 12px" }}>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <select value={show.month} onChange={e => updateShow(show.id, "month", e.target.value)}
-                      style={{ background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 4px", fontSize: 12 }}>
-                      {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    <select value={show.year} onChange={e => updateShow(show.id, "year", parseInt(e.target.value))}
-                      style={{ background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 4px", fontSize: 12 }}>
-                      {[2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
+                  <input type="date" value={show.date || ""} onChange={e => updateShow(show.id, "date", e.target.value)}
+                    style={{ background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, padding: "3px 6px", fontSize: 12,
+                      colorScheme: "dark", cursor: "pointer" }} />
                 </td>
                 <td style={{ padding: "8px 12px", textAlign: "right" }}>
                   <EditableCell value={show.days} prefix="" onChange={v => updateShow(show.id, "days", v)} />
@@ -1070,22 +1095,25 @@ function OtherIncomePage({ otherIncome, setOtherIncome }) {
 
 // ─── VAT & TAX ───────────────────────────────────────────
 function VATPage({ data, vatSettings }) {
-  // Calculate quarterly VAT
+  // Calculate quarterly VAT using UK quarters (Jan-Mar, Apr-Jun, Jul-Sep, Oct-Dec)
   const vatQuarters = {};
   data.forEach(d => {
     const qi = Math.floor(d.monthIdx / 3) + 1;
     const qk = `Q${qi} ${d.year}`;
-    if (!vatQuarters[qk]) vatQuarters[qk] = { income: 0, costs: 0, label: qk, months: [] };
+    if (!vatQuarters[qk]) vatQuarters[qk] = { income: 0, fixedCosts: 0, projectCosts: 0, label: qk, months: [], endMonthIdx: -1 };
     vatQuarters[qk].income += d.income;
-    vatQuarters[qk].costs += d.totalCosts;
+    vatQuarters[qk].fixedCosts += d.fixedCosts;
+    vatQuarters[qk].projectCosts += d.projectCosts;
     vatQuarters[qk].months.push(d.label);
+    if (d.monthIdx > vatQuarters[qk].endMonthIdx) vatQuarters[qk].endMonthIdx = d.monthIdx;
   });
 
   const vatData = Object.values(vatQuarters).map(q => {
     const vatOnSales = q.income * vatSettings.rate;
-    const vatOnPurchases = q.costs * vatSettings.reclaimRate;
+    const vatOnPurchases = (q.fixedCosts + q.projectCosts) * vatSettings.reclaimRate;
     const vatDue = vatOnSales - vatOnPurchases;
-    return { ...q, vatOnSales, vatOnPurchases, vatDue };
+    const paymentLabel = VAT_PAYMENT_LABELS[q.endMonthIdx] || "—";
+    return { ...q, vatOnSales, vatOnPurchases, vatDue, paymentLabel };
   });
 
   const totalVatDue = vatData.reduce((s, q) => s + q.vatDue, 0);
@@ -1095,19 +1123,23 @@ function VATPage({ data, vatSettings }) {
       {/* VAT Settings */}
       <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16,
         border: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>VAT Settings</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>UK VAT Settings</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 16 }}>
           <div>
             <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>VAT Rate</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.accent }}>{(vatSettings.rate * 100).toFixed(0)}%</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Payment Frequency</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Quarterly</div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Reclaim Rate</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.green }}>{(vatSettings.reclaimRate * 100).toFixed(0)}%</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Payment Delay</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>1 month after quarter end</div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Quarters End</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Mar, Jun, Sep, Dec</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Payment Due</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>1 month + 7 days</div>
           </div>
           <div>
             <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Total VAT Forecast</div>
@@ -1123,7 +1155,7 @@ function VATPage({ data, vatSettings }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-              {["Quarter", "Income", "VAT on Sales", "VAT on Purchases", "VAT Due", "Payment Month"].map((h, i) => (
+              {["Quarter", "Income", "Costs (ex VAT)", "VAT on Sales", "VAT Reclaimable", "Net VAT Due", "Payment Due"].map((h, i) => (
                 <th key={i} style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : "right",
                   fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase" }}>{h}</th>
               ))}
@@ -1134,12 +1166,13 @@ function VATPage({ data, vatSettings }) {
               <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
                 <td style={{ padding: "10px 12px", fontWeight: 600, color: C.text, fontSize: 13 }}>{q.label}</td>
                 <td style={{ padding: "10px 12px", textAlign: "right", color: C.green, fontSize: 13 }}>{fmt(q.income)}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", color: C.orange, fontSize: 13 }}>{fmt(q.fixedCosts + q.projectCosts)}</td>
                 <td style={{ padding: "10px 12px", textAlign: "right", color: C.red, fontSize: 13 }}>{fmt(q.vatOnSales)}</td>
                 <td style={{ padding: "10px 12px", textAlign: "right", color: C.green, fontSize: 13 }}>{fmt(q.vatOnPurchases)}</td>
                 <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700,
                   color: q.vatDue > 0 ? C.red : C.green, fontSize: 13 }}>{fmt(q.vatDue)}</td>
                 <td style={{ padding: "10px 12px", textAlign: "right", color: C.textMuted, fontSize: 12 }}>
-                  {q.months.length > 0 ? `+1mo after ${q.months[q.months.length - 1]}` : "—"}
+                  {q.paymentLabel}
                 </td>
               </tr>
             ))}
@@ -1157,8 +1190,8 @@ function VATPage({ data, vatSettings }) {
             <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
             <Tooltip content={<ChartTooltip />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="vatOnSales" name="VAT Collected" fill={C.red} opacity={0.7} radius={[3, 3, 0, 0]} />
-            <Bar dataKey="vatOnPurchases" name="VAT Reclaimable" fill={C.green} opacity={0.7} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="vatOnSales" name="VAT on Sales (20%)" fill={C.red} opacity={0.7} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="vatOnPurchases" name="VAT Reclaimable (20%)" fill={C.green} opacity={0.7} radius={[3, 3, 0, 0]} />
             <Bar dataKey="vatDue" name="Net VAT Due" fill={C.orange} opacity={0.8} radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -1184,7 +1217,7 @@ function MonthlyDetailPage({ data }) {
         <tbody>
           {data.map((d, i) => {
             const net = d.income - d.totalCosts;
-            const isQuarterEnd = (d.monthIdx + 1) % 3 === 0;
+            const isQuarterEnd = VAT_QUARTER_END_MONTHS.includes(d.monthIdx);
             return (
               <tr key={i} style={{ borderBottom: isQuarterEnd ? `2px solid ${C.border}` : `1px solid ${C.border}22`,
                 background: isQuarterEnd ? C.surfaceLight + "22" : "transparent" }}>
@@ -1229,6 +1262,7 @@ function ScenariosPage({ shows, costGroups, projects, otherIncome, openingBalanc
   Object.entries(SCENARIOS).forEach(([key, sc]) => {
     let balance = openingBalance;
     let vatAcc = 0;
+    let vatPend = 0;
     const sdata = monthRange.map((mr) => {
       const mi = monthIndex(mr.month);
       const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
@@ -1254,7 +1288,8 @@ function ScenariosPage({ shows, costGroups, projects, otherIncome, openingBalanc
       const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
       vatAcc += vatCollected - vatOnPurchases;
       let vatPayment = 0;
-      if ([0, 3, 6, 9].includes(mi)) { vatPayment = Math.max(vatAcc, 0); vatAcc = 0; }
+      if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPend = Math.max(vatAcc, 0); vatAcc = 0; }
+      if (VAT_PAYMENT_MONTHS.includes(mi)) { vatPayment = vatPend; vatPend = 0; }
       const totalCosts = fixedCosts + projectCosts + vatPayment;
       balance += income - totalCosts;
       return { ...mr, monthIdx: mi, income, totalCosts, balance };
@@ -1336,7 +1371,7 @@ function SparkCashflow() {
   const [costGroups, setCostGroups] = useState(DEFAULT_COST_GROUPS);
   const [projects, setProjects] = useState(DEFAULT_PROJECTS);
   const [otherIncome, setOtherIncome] = useState(DEFAULT_OTHER_INCOME);
-  const [vatSettings] = useState({ rate: 0.20, reclaimRate: 0.05, paymentDelay: 1 });
+  const [vatSettings] = useState({ rate: 0.20, reclaimRate: 0.20, paymentDelay: 1 });
 
   // Generate month range
   const monthRange = useMemo(() => generateMonthRange(2026, 0, timeframe), [timeframe]);
@@ -1346,6 +1381,7 @@ function SparkCashflow() {
     const sc = SCENARIOS[scenario];
     let balance = openingBalance;
     let vatAccumulator = 0;
+    let vatPending = 0; // VAT from closed quarter awaiting payment
 
     return monthRange.map((mr) => {
       const mi = monthIndex(mr.month);
@@ -1385,16 +1421,22 @@ function SparkCashflow() {
         });
       });
 
-      // VAT — simplified: collect on income, pay quarterly with 1 month delay
+      // UK VAT — 20% on sales, 20% reclaimable on purchases
+      // Quarters end Mar, Jun, Sep, Dec. Payment due 1 month + 7 days after quarter end.
       const vatCollected = income * vatSettings.rate;
       const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
       vatAccumulator += vatCollected - vatOnPurchases;
 
       let vatPayment = 0;
-      // Pay VAT one month after quarter end (quarters: Mar, Jun, Sep, Dec → pay Apr, Jul, Oct, Jan)
-      if ([0, 3, 6, 9].includes(mi)) { // Jan, Apr, Jul, Oct
-        vatPayment = Math.max(vatAccumulator, 0);
+      // Close quarter at end of Mar(2), Jun(5), Sep(8), Dec(11)
+      if (VAT_QUARTER_END_MONTHS.includes(mi)) {
+        vatPending = Math.max(vatAccumulator, 0);
         vatAccumulator = 0;
+      }
+      // Pay VAT in May(4), Aug(7), Nov(10), Feb(1) — 1 month + 7 days after quarter end
+      if (VAT_PAYMENT_MONTHS.includes(mi)) {
+        vatPayment = vatPending;
+        vatPending = 0;
       }
 
       const totalCosts = fixedCosts + projectCosts + vatPayment;
@@ -1565,11 +1607,11 @@ function SparkCashflow() {
       const [scenario, setScenario] = useState("expected");
       const [timeframe, setTimeframe] = useState(loaded?.timeframe || 12);
       const [openingBalance, setOpeningBalance] = useState(loaded?.openingBalance ?? DEFAULT_OPENING_BALANCE);
-      const [shows, setShows] = useState(loaded?.shows || DEFAULT_SHOWS);
+      const [shows, setShows] = useState(migrateShowDates(loaded?.shows || DEFAULT_SHOWS));
       const [costGroups, setCostGroups] = useState(loaded?.costGroups || DEFAULT_COST_GROUPS);
       const [projects, setProjects] = useState(loaded?.projects || DEFAULT_PROJECTS);
       const [otherIncome, setOtherIncome] = useState(loaded?.otherIncome || DEFAULT_OTHER_INCOME);
-      const [vatSettings] = useState(loaded?.vatSettings || { rate: 0.20, reclaimRate: 0.05, paymentDelay: 1 });
+      const [vatSettings] = useState({ rate: 0.20, reclaimRate: 0.20, paymentDelay: 1 });
       const [saveStatus, setSaveStatus] = useState('idle');
 
       // Auto-save with debounce
@@ -1599,6 +1641,7 @@ function SparkCashflow() {
         const sc = SCENARIOS[scenario];
         let balance = openingBalance;
         let vatAccumulator = 0;
+        let vatPending = 0;
 
         return monthRange.map((mr) => {
           const mi = monthIndex(mr.month);
@@ -1626,11 +1669,13 @@ function SparkCashflow() {
               }
             });
           });
+          // UK VAT — quarters end Mar, Jun, Sep, Dec; payment 1mo+7d after
           const vatCollected = income * vatSettings.rate;
           const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
           vatAccumulator += vatCollected - vatOnPurchases;
           let vatPayment = 0;
-          if ([0, 3, 6, 9].includes(mi)) { vatPayment = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
+          if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPending = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
+          if (VAT_PAYMENT_MONTHS.includes(mi)) { vatPayment = vatPending; vatPending = 0; }
           const totalCosts = fixedCosts + projectCosts + vatPayment;
           balance += income - totalCosts;
           return { ...mr, monthIdx: mi, income, fixedCosts, projectCosts, vatPayment, totalCosts, balance,
