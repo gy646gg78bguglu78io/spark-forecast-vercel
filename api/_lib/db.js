@@ -1,23 +1,28 @@
 // ═══════════════════════════════════════════════════════════
-// Database connection pool (mysql2)
+// Database helper — Neon Serverless Postgres
 // ═══════════════════════════════════════════════════════════
-const mysql = require('mysql2/promise');
+// Auto-creates the forecast_data table on first use.
+// Set DATABASE_URL env var (auto-injected by Neon integration).
 
-let pool = null;
+const { neon } = require('@neondatabase/serverless');
 
-function getPool() {
-  if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      waitForConnections: true,
-      connectionLimit: 5,
-      charset: 'utf8mb4',
-    });
-  }
-  return pool;
+let tableReady = false;
+
+function getSQL() {
+  return neon(process.env.DATABASE_URL);
 }
 
-module.exports = { getPool };
+async function ensureTable() {
+  if (tableReady) return;
+  const sql = getSQL();
+  await sql`
+    CREATE TABLE IF NOT EXISTS forecast_data (
+      data_key   VARCHAR(255) PRIMARY KEY,
+      data_value TEXT NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  tableReady = true;
+}
+
+module.exports = { getSQL, ensureTable };

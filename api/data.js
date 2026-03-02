@@ -5,10 +5,10 @@
 // POST /api/data          → Save forecast data
 // GET  /api/data?history  → Get save history
 //
-// Requires authentication (JWT cookie).
+// Uses Neon Postgres. Requires authentication (JWT cookie).
 
 const { getAuthUser } = require('./_lib/jwt');
-const { getPool } = require('./_lib/db');
+const { getSQL, ensureTable } = require('./_lib/db');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -19,24 +19,30 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
+  await ensureTable();
+  const sql = getSQL();
   const method = req.method;
-  const pool = getPool();
 
   // ─── GET — load data ──────────────────────────────────
   if (method === 'GET') {
     try {
       // Return save history
       if (req.query.history !== undefined) {
-        const [rows] = await pool.query(
-          "SELECT data_key, updated_at, LENGTH(data_value) as size_bytes FROM forecast_data ORDER BY updated_at DESC LIMIT 20"
-        );
+        const rows = await sql`
+          SELECT data_key, updated_at, LENGTH(data_value) AS size_bytes
+          FROM forecast_data
+          ORDER BY updated_at DESC
+          LIMIT 20
+        `;
         return res.json({ history: rows });
       }
 
       // Return forecast data
-      const [rows] = await pool.query(
-        "SELECT data_value, updated_at FROM forecast_data WHERE data_key = 'forecast'"
-      );
+      const rows = await sql`
+        SELECT data_value, updated_at
+        FROM forecast_data
+        WHERE data_key = 'forecast'
+      `;
 
       if (rows.length > 0) {
         const data = JSON.parse(rows[0].data_value);
@@ -70,12 +76,12 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-      await pool.query(
-        `INSERT INTO forecast_data (data_key, data_value)
-         VALUES ('forecast', ?)
-         ON DUPLICATE KEY UPDATE data_value = VALUES(data_value), updated_at = CURRENT_TIMESTAMP`,
-        [jsonData]
-      );
+      await sql`
+        INSERT INTO forecast_data (data_key, data_value, updated_at)
+        VALUES ('forecast', ${jsonData}, CURRENT_TIMESTAMP)
+        ON CONFLICT (data_key)
+        DO UPDATE SET data_value = ${jsonData}, updated_at = CURRENT_TIMESTAMP
+      `;
 
       return res.json({
         success: true,
