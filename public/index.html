@@ -216,6 +216,24 @@ const DEFAULT_OTHER_INCOME = [
   { id: "oi_3", name: "Equipment Hire Out", amount: 150, type: "monthly", startMonth: "Jan", startYear: 2026, enabled: false, note: "" },
 ];
 
+const DEFAULT_LOANS = [
+  { id: "loan_1", name: "Bounce Back Loan", outstandingBalance: 25000, annualRate: 2.5, remainingMonths: 51, startDate: null, enabled: true },
+];
+
+const DEFAULT_CT_SETTINGS = { rate: 19, fyEndMonth: 5 }; // fyEndMonth: 5 = June (0-indexed)
+
+const DEFAULT_OPENING_BALANCES = {
+  bankAccounts: [
+    { id: "ba_1", name: "Current Account", amount: 100000 },
+    { id: "ba_2", name: "Savings Account", amount: 12250 },
+  ],
+  openingVatOwed: 0,
+  openingCT: [
+    { id: "ct_1", label: "CT from FY ending Jun 2025", amount: 0, fyEndMonth: 5 },
+    { id: "ct_2", label: "CT from partial year Jul-Dec 2025", amount: 0, fyEndMonth: 11 },
+  ],
+};
+
 const SCENARIOS = {
   expected: { label: "Expected", incMult: 1.0, costMult: 1.0, color: C.blue },
   optimistic: { label: "Optimistic", incMult: 1.15, costMult: 0.95, color: C.green },
@@ -276,6 +294,182 @@ function generateMonthRange(startYear, startMonth, count) {
     if (m >= 12) { m = 0; y++; }
   }
   return result;
+}
+
+// ─── Loan Amortization Helpers ─────────────────────────
+function calcMonthlyPayment(principal, annualRate, remainingMonths) {
+  if (remainingMonths <= 0 || principal <= 0) return 0;
+  if (annualRate === 0) return principal / remainingMonths;
+  const r = annualRate / 100 / 12;
+  return principal * (r * Math.pow(1 + r, remainingMonths)) / (Math.pow(1 + r, remainingMonths) - 1);
+}
+
+function buildLoanSchedule(loan, monthRange) {
+  const schedule = [];
+  let bal = loan.outstandingBalance;
+  const r = loan.annualRate / 100 / 12;
+  const pmt = calcMonthlyPayment(loan.outstandingBalance, loan.annualRate, loan.remainingMonths);
+  let started = !loan.startDate;
+  monthRange.forEach(mr => {
+    let cashIn = 0;
+    if (loan.startDate && !started) {
+      const startK = monthKey(loan.startDate.month, loan.startDate.year);
+      if (mr.key >= startK) { started = true; cashIn = loan.outstandingBalance; bal = loan.outstandingBalance; }
+    }
+    if (!started || bal <= 0) {
+      schedule.push({ ...mr, payment: 0, interest: 0, capital: 0, balance: bal, cashIn });
+      return;
+    }
+    const interest = bal * r;
+    const capital = Math.min(pmt - interest, bal);
+    bal = Math.max(bal - capital, 0);
+    schedule.push({ ...mr, payment: interest + capital, interest, capital, balance: bal, cashIn });
+  });
+  return schedule;
+}
+
+// ─── Corporation Tax Helpers ──────────────────────────
+function calcCTPaymentMonth(fyEndMonth) {
+  // CT due 9 months + 1 day after FY end → effectively 10 months later
+  return (fyEndMonth + 10) % 12;
+}
+
+// ─── Shared Calculation Engine ─────────────────────────
+function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings, loans = [], ctSettings = null, openingBalances = null }) {
+  const sc = SCENARIOS[scenario];
+  let balance = openingBalance;
+  let vatAccumulator = 0;
+  let vatPending = 0;
+
+  // Pre-compute loan schedules
+  const loanSchedules = loans.filter(l => l.enabled !== false).map(l => buildLoanSchedule(l, monthRange));
+
+  // CT tracking
+  const hasCT = ctSettings && ctSettings.rate > 0;
+  let fyTaxableProfit = 0;
+  let ctPendingPayments = [];
+  const ctPayMonthIdx = hasCT ? calcCTPaymentMonth(ctSettings.fyEndMonth) : -1;
+  let seenFirstFYEnd = false;
+
+  // Opening CT payments
+  if (openingBalances && openingBalances.openingCT) {
+    openingBalances.openingCT.forEach(ct => {
+      if (ct.amount > 0) {
+        ctPendingPayments.push({ amount: ct.amount, payMonthIdx: calcCTPaymentMonth(ct.fyEndMonth), paid: false });
+      }
+    });
+  }
+
+  // Opening VAT
+  let openingVatRemaining = openingBalances?.openingVatOwed || 0;
+
+  return monthRange.map((mr, idx) => {
+    const mi = monthIndex(mr.month);
+
+    // ── Income ──
+    const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
+    const rawShowIncome = monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0);
+    let otherIncomeTotal = 0;
+    otherIncome.filter(oi => oi.enabled).forEach(oi => {
+      if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) otherIncomeTotal += oi.amount;
+      if (oi.type === "monthly") {
+        const startK = monthKey(oi.startMonth, oi.startYear);
+        if (mr.key >= startK) otherIncomeTotal += oi.amount;
+      }
+    });
+
+    // Loan cash inflows (new future loans received this month)
+    let loanCashIn = 0;
+    loanSchedules.forEach((schedule) => { if (schedule[idx]) loanCashIn += schedule[idx].cashIn; });
+
+    const income = (rawShowIncome + otherIncomeTotal) * sc.incMult;
+
+    // ── Costs ──
+    const rawFixed = costGroups.filter(g => g.enabled).reduce((s, g) =>
+      s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
+    const fixedCosts = rawFixed * sc.costMult;
+
+    let projectCosts = 0;
+    projects.filter(p => p.enabled).forEach(p => {
+      p.items.forEach(item => {
+        if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) projectCosts += item.amount;
+        if (item.type === "monthly") {
+          const startK = monthKey(item.startMonth, item.startYear);
+          if (mr.key >= startK) projectCosts += item.amount;
+        }
+      });
+    });
+
+    // Loan repayments
+    let loanInterest = 0, loanCapital = 0, loanPayment = 0;
+    loanSchedules.forEach((schedule) => {
+      if (schedule[idx]) { loanInterest += schedule[idx].interest; loanCapital += schedule[idx].capital; loanPayment += schedule[idx].payment; }
+    });
+
+    // ── VAT ──
+    const vatCollected = income * vatSettings.rate;
+    const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
+    vatAccumulator += vatCollected - vatOnPurchases;
+    let vatPayment = 0;
+    if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPending = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
+    if (VAT_PAYMENT_MONTHS.includes(mi)) { vatPayment = vatPending + openingVatRemaining; vatPending = 0; openingVatRemaining = 0; }
+
+    // ── Corporation Tax ──
+    let ctPayment = 0;
+    if (hasCT) {
+      // Taxable profit: income - costs - loan interest (NOT capital, NOT VAT, NOT loan cash in)
+      fyTaxableProfit += income - fixedCosts - projectCosts - loanInterest;
+
+      // At FY end, calculate CT for completed year
+      if (mi === ctSettings.fyEndMonth) {
+        if (seenFirstFYEnd) {
+          // This is a complete FY — calculate CT
+          const ctDue = Math.max(fyTaxableProfit * (ctSettings.rate / 100), 0);
+          if (ctDue > 0) {
+            ctPendingPayments.push({ amount: ctDue, payMonthIdx: ctPayMonthIdx, paid: false });
+          }
+        }
+        seenFirstFYEnd = true;
+        fyTaxableProfit = 0;
+      }
+
+      // Pay any CT due this month
+      ctPendingPayments.forEach(ct => {
+        if (!ct.paid && ct.payMonthIdx === mi) { ctPayment += ct.amount; ct.paid = true; }
+      });
+      ctPendingPayments = ctPendingPayments.filter(ct => !ct.paid);
+    }
+
+    // ── Totals ──
+    const totalCosts = fixedCosts + projectCosts + vatPayment + loanPayment + ctPayment;
+    balance += income + loanCashIn - totalCosts;
+
+    return {
+      ...mr, monthIdx: mi, income, fixedCosts, projectCosts,
+      vatPayment, loanPayment, loanInterest, loanCapital, loanCashIn, ctPayment,
+      totalCosts, balance,
+      showCount: monthShows.length, otherIncome: otherIncomeTotal,
+    };
+  });
+}
+
+// ─── Reusable Chart Component ──────────────────────────
+function CashflowChart({ data, height = 300, showLegend = true }) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+        <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
+        <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
+        {showLegend && <Tooltip content={<ChartTooltip />} />}
+        {showLegend && <Legend wrapperStyle={{ fontSize: 11 }} />}
+        <Bar dataKey="income" name="Income" fill={C.green} radius={[3, 3, 0, 0]} opacity={0.8} />
+        <Bar dataKey="totalCosts" name="Costs" fill={C.red} radius={[3, 3, 0, 0]} opacity={0.6} />
+        <Line dataKey="balance" name="Balance" type="monotone" stroke={C.blue} strokeWidth={2.5} dot={false} />
+        <ReferenceLine y={0} stroke={C.red} strokeDasharray="4 4" strokeOpacity={0.5} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
 }
 
 // ─── Reusable Components ─────────────────────────────────
@@ -446,9 +640,11 @@ const NAV_ITEMS = [
   { id: "other_income", icon: "💷", label: "Other Income" },
   { id: "costs", icon: "📋", label: "Monthly Costs" },
   { id: "projects", icon: "🔧", label: "Projects" },
+  { id: "loans", icon: "🏦", label: "Loans" },
   { id: "vat", icon: "🏛️", label: "VAT & Tax" },
   { id: "monthly", icon: "📅", label: "Monthly Detail" },
   { id: "scenarios", icon: "🔀", label: "Scenarios" },
+  { id: "settings", icon: "⚙️", label: "Settings" },
 ];
 
 function Sidebar({ active, onNav, scenario, onScenario, timeframe, onTimeframe }) {
@@ -523,12 +719,14 @@ function Sidebar({ active, onNav, scenario, onScenario, timeframe, onTimeframe }
 // ═══════════════════════════════════════════════════════════
 
 // ─── DASHBOARD ───────────────────────────────────────────
-function DashboardPage({ data, openingBalance, scenario }) {
+function DashboardPage({ data, openingBalance, scenario, loans, ctSettings }) {
   const sc = SCENARIOS[scenario];
   const totalIncome = data.reduce((s, d) => s + d.income, 0);
   const totalCosts = data.reduce((s, d) => s + d.totalCosts, 0);
   const netCash = totalIncome - totalCosts;
   const endBalance = data.length > 0 ? data[data.length - 1].balance : openingBalance;
+  const totalLoanPayments = data.reduce((s, d) => s + (d.loanPayment || 0), 0);
+  const totalCTPayments = data.reduce((s, d) => s + (d.ctPayment || 0), 0);
   const lowestBalance = Math.min(...data.map(d => d.balance));
   const lowestMonth = data.find(d => d.balance === lowestBalance);
   const runwayMonths = data.length > 0 ? (() => {
@@ -566,24 +764,16 @@ function DashboardPage({ data, openingBalance, scenario }) {
         <KPICard label="Lowest Point" value={fmtK(lowestBalance)} icon="⚠️"
           color={lowestBalance > 20000 ? C.green : lowestBalance > 0 ? C.accent : C.red}
           subtitle={lowestMonth ? lowestMonth.label : ""} />
+        {totalLoanPayments > 0 && <KPICard label="Loan Repayments" value={fmtK(totalLoanPayments)} icon="🏦"
+          color={C.textMuted} subtitle={`${(loans || []).filter(l => l.enabled).length} active loan(s)`} />}
+        {totalCTPayments > 0 && <KPICard label="Corporation Tax" value={fmtK(totalCTPayments)} icon="🏛️"
+          color={C.red} subtitle={`${ctSettings?.rate || 19}% rate`} />}
       </div>
 
       {/* Main Cashflow Chart */}
       <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Cashflow Overview</div>
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-            <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
-            <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
-            <Tooltip content={<ChartTooltip />} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="income" name="Income" fill={C.green} radius={[3, 3, 0, 0]} opacity={0.8} />
-            <Bar dataKey="totalCosts" name="Costs" fill={C.red} radius={[3, 3, 0, 0]} opacity={0.6} />
-            <Line dataKey="balance" name="Balance" type="monotone" stroke={C.blue} strokeWidth={2.5} dot={false} />
-            <ReferenceLine y={0} stroke={C.red} strokeDasharray="4 4" strokeOpacity={0.5} />
-          </ComposedChart>
-        </ResponsiveContainer>
+        <CashflowChart data={data} height={300} showLegend={true} />
       </div>
 
       {/* Two-column: Quarterly + Seasonal */}
@@ -1094,7 +1284,7 @@ function OtherIncomePage({ otherIncome, setOtherIncome }) {
 }
 
 // ─── VAT & TAX ───────────────────────────────────────────
-function VATPage({ data, vatSettings }) {
+function VATPage({ data, vatSettings, ctSettings }) {
   // Calculate quarterly VAT using UK quarters (Jan-Mar, Apr-Jun, Jul-Sep, Oct-Dec)
   const vatQuarters = {};
   data.forEach(d => {
@@ -1181,7 +1371,7 @@ function VATPage({ data, vatSettings }) {
       </div>
 
       {/* VAT Chart */}
-      <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}`, marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>VAT Cashflow Impact</div>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={vatData}>
@@ -1196,18 +1386,77 @@ function VATPage({ data, vatSettings }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Corporation Tax Summary */}
+      {ctSettings && ctSettings.rate > 0 && (() => {
+        const totalCTPayments = data.reduce((s, d) => s + (d.ctPayment || 0), 0);
+        const ctMonths = data.filter(d => (d.ctPayment || 0) > 0);
+        const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const fyEndLabel = MONTH_NAMES[ctSettings.fyEndMonth];
+        const payMonthIdx = calcCTPaymentMonth(ctSettings.fyEndMonth);
+        const payLabel = MONTH_NAMES[payMonthIdx];
+        return (
+          <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Corporation Tax Summary</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>CT Rate</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: C.accent }}>{ctSettings.rate}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Financial Year End</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{fyEndLabel}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Payment Due</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{payLabel} (9mo + 1 day)</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>Total CT Forecast</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: C.red }}>{fmtK(totalCTPayments)}</div>
+              </div>
+            </div>
+            {ctMonths.length > 0 && (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                    {["Payment Month", "CT Amount"].map((h, i) => (
+                      <th key={i} style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : "right",
+                        fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ctMonths.map((d, i) => (
+                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                      <td style={{ padding: "10px 12px", fontWeight: 600, color: C.text, fontSize: 13 }}>{d.label}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", color: C.red, fontWeight: 700, fontSize: 13 }}>{fmt(d.ctPayment)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 // ─── MONTHLY DETAIL ──────────────────────────────────────
 function MonthlyDetailPage({ data }) {
+  const hasLoans = data.some(d => (d.loanPayment || 0) > 0 || (d.loanCashIn || 0) > 0);
+  const hasCT = data.some(d => (d.ctPayment || 0) > 0);
+  const headers = ["Month", "Season", "Shows", "Show Income", "Other", "Total In", "Fixed Costs", "Projects", "VAT"];
+  if (hasLoans) headers.push("Loans");
+  if (hasCT) headers.push("CT");
+  headers.push("Total Out", "Net", "Balance");
   return (
     <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1050 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: hasLoans || hasCT ? 1200 : 1050 }}>
         <thead>
           <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-            {["Month", "Season", "Shows", "Show Income", "Other", "Total In", "Fixed Costs", "Projects", "VAT", "Total Out", "Net", "Balance"].map((h, i) => (
+            {headers.map((h, i) => (
               <th key={i} style={{ padding: "10px 12px", textAlign: i <= 1 ? "left" : "right",
                 fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: 0.5,
                 position: "sticky", top: 0, background: C.surface, zIndex: 1 }}>{h}</th>
@@ -1216,7 +1465,7 @@ function MonthlyDetailPage({ data }) {
         </thead>
         <tbody>
           {data.map((d, i) => {
-            const net = d.income - d.totalCosts;
+            const net = d.income + (d.loanCashIn || 0) - d.totalCosts;
             const isQuarterEnd = VAT_QUARTER_END_MONTHS.includes(d.monthIdx);
             return (
               <tr key={i} style={{ borderBottom: isQuarterEnd ? `2px solid ${C.border}` : `1px solid ${C.border}22`,
@@ -1238,6 +1487,12 @@ function MonthlyDetailPage({ data }) {
                 <td style={{ padding: "8px 12px", textAlign: "right", color: C.red }}>{fmt(d.fixedCosts)}</td>
                 <td style={{ padding: "8px 12px", textAlign: "right", color: C.orange }}>{d.projectCosts > 0 ? fmt(d.projectCosts) : "—"}</td>
                 <td style={{ padding: "8px 12px", textAlign: "right", color: C.purple }}>{d.vatPayment > 0 ? fmt(d.vatPayment) : "—"}</td>
+                {hasLoans && <td style={{ padding: "8px 12px", textAlign: "right", color: C.blue }}>
+                  {(d.loanPayment || 0) > 0 ? fmt(d.loanPayment) : (d.loanCashIn || 0) > 0 ? <span style={{color:C.green}}>+{fmt(d.loanCashIn)}</span> : "—"}
+                </td>}
+                {hasCT && <td style={{ padding: "8px 12px", textAlign: "right", color: "#e879f9" }}>
+                  {(d.ctPayment || 0) > 0 ? fmt(d.ctPayment) : "—"}
+                </td>}
                 <td style={{ padding: "8px 12px", textAlign: "right", color: C.red, fontWeight: 600 }}>{fmt(d.totalCosts)}</td>
                 <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700,
                   color: net >= 0 ? C.green : C.red }}>{fmt(net)}</td>
@@ -1257,44 +1512,13 @@ function MonthlyDetailPage({ data }) {
 }
 
 // ─── SCENARIOS ───────────────────────────────────────────
-function ScenariosPage({ shows, costGroups, projects, otherIncome, openingBalance, monthRange, vatSettings }) {
+function ScenariosPage({ shows, costGroups, projects, otherIncome, openingBalance, monthRange, vatSettings, loans, ctSettings, openingBalances }) {
   const scenarioResults = {};
-  Object.entries(SCENARIOS).forEach(([key, sc]) => {
-    let balance = openingBalance;
-    let vatAcc = 0;
-    let vatPend = 0;
-    const sdata = monthRange.map((mr) => {
-      const mi = monthIndex(mr.month);
-      const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
-      let oiTotal = 0;
-      otherIncome.filter(oi => oi.enabled).forEach(oi => {
-        if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) oiTotal += oi.amount;
-        if (oi.type === "monthly") { const sk = monthKey(oi.startMonth, oi.startYear); if (mr.key >= sk) oiTotal += oi.amount; }
-      });
-      const income = (monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0) + oiTotal) * sc.incMult;
-      const fixedCosts = costGroups.filter(g => g.enabled).reduce((s, g) =>
-        s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0) * sc.costMult;
-      let projectCosts = 0;
-      projects.filter(p => p.enabled).forEach(p => {
-        p.items.forEach(item => {
-          if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) projectCosts += item.amount;
-          if (item.type === "monthly") {
-            const startK = monthKey(item.startMonth, item.startYear);
-            if (mr.key >= startK) projectCosts += item.amount;
-          }
-        });
-      });
-      const vatCollected = income * vatSettings.rate;
-      const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
-      vatAcc += vatCollected - vatOnPurchases;
-      let vatPayment = 0;
-      if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPend = Math.max(vatAcc, 0); vatAcc = 0; }
-      if (VAT_PAYMENT_MONTHS.includes(mi)) { vatPayment = vatPend; vatPend = 0; }
-      const totalCosts = fixedCosts + projectCosts + vatPayment;
-      balance += income - totalCosts;
-      return { ...mr, monthIdx: mi, income, totalCosts, balance };
+  Object.keys(SCENARIOS).forEach(key => {
+    scenarioResults[key] = calculateCashflow({
+      shows, costGroups, projects, otherIncome, openingBalance, scenario: key, monthRange, vatSettings,
+      loans, ctSettings, openingBalances
     });
-    scenarioResults[key] = sdata;
   });
 
   // Combine for chart
@@ -1359,6 +1583,275 @@ function ScenariosPage({ shows, costGroups, projects, otherIncome, openingBalanc
   );
 }
 
+// ─── LOANS PAGE ─────────────────────────────────────────
+function LoansPage({ loans, setLoans, monthRange }) {
+  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const addLoan = (isFuture) => {
+    const newLoan = {
+      id: "loan_" + Date.now(),
+      name: isFuture ? "New Future Loan" : "New Loan",
+      outstandingBalance: 0,
+      annualRate: 5.0,
+      remainingMonths: 60,
+      startDate: isFuture ? { month: monthRange[3]?.month || "Apr", year: monthRange[3]?.year || 2026 } : null,
+      enabled: true,
+    };
+    setLoans([...loans, newLoan]);
+  };
+
+  const updateLoan = (id, field, value) => {
+    setLoans(loans.map(l => l.id === id ? { ...l, [field]: value } : l));
+  };
+
+  const deleteLoan = (id) => {
+    setLoans(loans.filter(l => l.id !== id));
+  };
+
+  const enabledLoans = loans.filter(l => l.enabled);
+  const totalOutstanding = enabledLoans.reduce((s, l) => s + l.outstandingBalance, 0);
+  const totalMonthlyPayments = enabledLoans.reduce((s, l) => s + calcMonthlyPayment(l.outstandingBalance, l.annualRate, l.remainingMonths), 0);
+
+  // Calculate totals across the forecast for enabled loans
+  const schedules = enabledLoans.map(l => buildLoanSchedule(l, monthRange));
+  const totalInterest = schedules.reduce((s, sch) => s + sch.reduce((si, m) => si + m.interest, 0), 0);
+  const totalCapital = schedules.reduce((s, sch) => s + sch.reduce((si, m) => si + m.capital, 0), 0);
+
+  return (
+    <div>
+      {/* KPI Cards */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <KPICard label="Total Outstanding" value={fmtK(totalOutstanding)} icon="🏦" color={C.blue}
+          subtitle={`${enabledLoans.length} active loan(s)`} />
+        <KPICard label="Monthly Repayments" value={fmt(Math.round(totalMonthlyPayments))} icon="📅" color={C.red}
+          subtitle="Combined payments" />
+        <KPICard label="Total Interest" value={fmtK(totalInterest)} icon="📈" color={C.orange}
+          subtitle="Over forecast period" />
+        <KPICard label="Capital Repaid" value={fmtK(totalCapital)} icon="✅" color={C.green}
+          subtitle="Over forecast period" />
+      </div>
+
+      {/* Loans Table */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}`, marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Loan Schedule</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => addLoan(false)}
+              style={{ background: C.accent, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px",
+                fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Add Existing Loan</button>
+            <button onClick={() => addLoan(true)}
+              style={{ background: C.green, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px",
+                fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Add Future Loan</button>
+          </div>
+        </div>
+
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `2px solid ${C.border}` }}>
+              {["Name", "Balance", "Rate %", "Months Left", "Monthly Payment", "Start", "Enabled", ""].map((h, i) => (
+                <th key={i} style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : i === 7 ? "center" : "right",
+                  fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loans.map(loan => {
+              const monthlyPmt = calcMonthlyPayment(loan.outstandingBalance, loan.annualRate, loan.remainingMonths);
+              return (
+                <tr key={loan.id} style={{ borderBottom: `1px solid ${C.border}22`, opacity: loan.enabled ? 1 : 0.5 }}>
+                  <td style={{ padding: "8px 12px" }}>
+                    <EditableText value={loan.name} onChange={v => updateLoan(loan.id, "name", v)} />
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                    <EditableCell value={loan.outstandingBalance} onChange={v => updateLoan(loan.id, "outstandingBalance", v)} />
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                    <input type="number" step="0.1" value={loan.annualRate}
+                      onChange={e => updateLoan(loan.id, "annualRate", parseFloat(e.target.value) || 0)}
+                      style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4,
+                        padding: "4px 8px", width: 60, textAlign: "right", color: C.text, fontSize: 13 }} />
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                    <input type="number" value={loan.remainingMonths}
+                      onChange={e => updateLoan(loan.id, "remainingMonths", parseInt(e.target.value) || 0)}
+                      style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4,
+                        padding: "4px 8px", width: 60, textAlign: "right", color: C.text, fontSize: 13 }} />
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right", color: C.textMuted, fontSize: 13, fontWeight: 600 }}>
+                    {fmt(Math.round(monthlyPmt))}
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right", fontSize: 12 }}>
+                    {loan.startDate ? (
+                      <span style={{ color: C.green }}>{loan.startDate.month} {loan.startDate.year}</span>
+                    ) : (
+                      <span style={{ color: C.textDim }}>Existing</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                    <input type="checkbox" checked={loan.enabled}
+                      onChange={e => updateLoan(loan.id, "enabled", e.target.checked)} />
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                    <button onClick={() => deleteLoan(loan.id)}
+                      style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 14 }}>✕</button>
+                  </td>
+                </tr>
+              );
+            })}
+            {loans.length === 0 && (
+              <tr><td colSpan={8} style={{ padding: 20, textAlign: "center", color: C.textDim, fontSize: 13 }}>
+                No loans added yet. Click "+ Add Existing Loan" or "+ Add Future Loan" to get started.
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Info */}
+      <div style={{ background: C.surfaceLight, borderRadius: 8, padding: 14, fontSize: 11, color: C.textMuted,
+        border: `1px solid ${C.border}` }}>
+        <strong>How loans work:</strong> Existing loans begin repaying immediately. Future loans inject cash on their start date,
+        then repayments begin. Interest is calculated monthly on the reducing balance. Loan interest is tax-deductible for
+        Corporation Tax; capital repayments are not.
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS PAGE ──────────────────────────────────────
+function SettingsPage({ openingBalances, setOpeningBalances, ctSettings, setCtSettings, vatSettings }) {
+  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const addBankAccount = () => {
+    setOpeningBalances({
+      ...openingBalances,
+      bankAccounts: [...openingBalances.bankAccounts, { id: "ba_" + Date.now(), name: "New Account", amount: 0 }]
+    });
+  };
+
+  const updateBankAccount = (id, field, value) => {
+    setOpeningBalances({
+      ...openingBalances,
+      bankAccounts: openingBalances.bankAccounts.map(ba => ba.id === id ? { ...ba, [field]: value } : ba)
+    });
+  };
+
+  const deleteBankAccount = (id) => {
+    if (openingBalances.bankAccounts.length <= 1) return; // Keep at least one
+    setOpeningBalances({
+      ...openingBalances,
+      bankAccounts: openingBalances.bankAccounts.filter(ba => ba.id !== id)
+    });
+  };
+
+  const totalCash = openingBalances.bankAccounts.reduce((s, ba) => s + (ba.amount || 0), 0);
+
+  const updateOpeningCT = (id, field, value) => {
+    setOpeningBalances({
+      ...openingBalances,
+      openingCT: openingBalances.openingCT.map(ct => ct.id === id ? { ...ct, [field]: value } : ct)
+    });
+  };
+
+  return (
+    <div>
+      {/* Bank Accounts */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Opening Bank Balances</div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>These make up your starting cash position</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{fmt(totalCash)}</div>
+            <button onClick={addBankAccount}
+              style={{ background: C.accent, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px",
+                fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Add Account</button>
+          </div>
+        </div>
+
+        {openingBalances.bankAccounts.map(ba => (
+          <div key={ba.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8,
+            padding: "8px 12px", background: C.surfaceLight, borderRadius: 6, border: `1px solid ${C.border}22` }}>
+            <div style={{ flex: 1 }}>
+              <EditableText value={ba.name} onChange={v => updateBankAccount(ba.id, "name", v)} />
+            </div>
+            <div style={{ width: 140 }}>
+              <EditableCell value={ba.amount} onChange={v => updateBankAccount(ba.id, "amount", v)} />
+            </div>
+            {openingBalances.bankAccounts.length > 1 && (
+              <button onClick={() => deleteBankAccount(ba.id)}
+                style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 14 }}>✕</button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Corporation Tax Settings */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Corporation Tax</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>CT Rate (%)</div>
+            <input type="number" step="1" value={ctSettings.rate}
+              onChange={e => setCtSettings({ ...ctSettings, rate: parseFloat(e.target.value) || 0 })}
+              style={{ background: C.surfaceLight, border: `1px solid ${C.border}`, borderRadius: 6,
+                padding: "8px 12px", width: "100%", color: C.text, fontSize: 14, fontWeight: 600 }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>Financial Year End</div>
+            <select value={ctSettings.fyEndMonth}
+              onChange={e => setCtSettings({ ...ctSettings, fyEndMonth: parseInt(e.target.value) })}
+              style={{ background: C.surfaceLight, border: `1px solid ${C.border}`, borderRadius: 6,
+                padding: "8px 12px", width: "100%", color: C.text, fontSize: 14, fontWeight: 600 }}>
+              {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6 }}>Payment Due</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text, padding: "8px 0" }}>
+              {MONTH_NAMES[calcCTPaymentMonth(ctSettings.fyEndMonth)]} <span style={{ fontSize: 11, color: C.textDim }}>(9 months + 1 day after FY end)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Opening VAT Owed */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>Opening VAT Owed</div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12 }}>
+          VAT owed from the quarter before your plan start. This will be included in the first VAT payment month.
+        </div>
+        <div style={{ width: 200 }}>
+          <EditableCell value={openingBalances.openingVatOwed || 0}
+            onChange={v => setOpeningBalances({ ...openingBalances, openingVatOwed: v })} />
+        </div>
+      </div>
+
+      {/* Opening Corporation Tax */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>Opening Corporation Tax</div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12 }}>
+          CT owed from financial years before your plan start. Enter amounts from your accounts. Each will be paid in the auto-calculated payment month.
+        </div>
+
+        {openingBalances.openingCT.map(ct => (
+          <div key={ct.id} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8,
+            padding: "10px 14px", background: C.surfaceLight, borderRadius: 6, border: `1px solid ${C.border}22` }}>
+            <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ct.label}</div>
+            <div style={{ width: 140 }}>
+              <EditableCell value={ct.amount} onChange={v => updateOpeningCT(ct.id, "amount", v)} />
+            </div>
+            <div style={{ fontSize: 11, color: C.textDim, width: 120, textAlign: "right" }}>
+              Pays in {MONTH_NAMES[calcCTPaymentMonth(ct.fyEndMonth)]}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════
@@ -1377,77 +1870,9 @@ function SparkCashflow() {
   const monthRange = useMemo(() => generateMonthRange(2026, 0, timeframe), [timeframe]);
 
   // Core calculation
-  const data = useMemo(() => {
-    const sc = SCENARIOS[scenario];
-    let balance = openingBalance;
-    let vatAccumulator = 0;
-    let vatPending = 0; // VAT from closed quarter awaiting payment
-
-    return monthRange.map((mr) => {
-      const mi = monthIndex(mr.month);
-
-      // Show income
-      const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
-      const rawShowIncome = monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0);
-
-      // Other income
-      let otherIncomeTotal = 0;
-      otherIncome.filter(oi => oi.enabled).forEach(oi => {
-        if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) otherIncomeTotal += oi.amount;
-        if (oi.type === "monthly") {
-          const startK = monthKey(oi.startMonth, oi.startYear);
-          if (mr.key >= startK) otherIncomeTotal += oi.amount;
-        }
-      });
-
-      const income = (rawShowIncome + otherIncomeTotal) * sc.incMult;
-
-      // Fixed costs
-      const rawFixed = costGroups.filter(g => g.enabled).reduce((s, g) =>
-        s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
-      const fixedCosts = rawFixed * sc.costMult;
-
-      // Project costs
-      let projectCosts = 0;
-      projects.filter(p => p.enabled).forEach(p => {
-        p.items.forEach(item => {
-          if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) {
-            projectCosts += item.amount;
-          }
-          if (item.type === "monthly") {
-            const startK = monthKey(item.startMonth, item.startYear);
-            if (mr.key >= startK) projectCosts += item.amount;
-          }
-        });
-      });
-
-      // UK VAT — 20% on sales, 20% reclaimable on purchases
-      // Quarters end Mar, Jun, Sep, Dec. Payment due 1 month + 7 days after quarter end.
-      const vatCollected = income * vatSettings.rate;
-      const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
-      vatAccumulator += vatCollected - vatOnPurchases;
-
-      let vatPayment = 0;
-      // Close quarter at end of Mar(2), Jun(5), Sep(8), Dec(11)
-      if (VAT_QUARTER_END_MONTHS.includes(mi)) {
-        vatPending = Math.max(vatAccumulator, 0);
-        vatAccumulator = 0;
-      }
-      // Pay VAT in May(4), Aug(7), Nov(10), Feb(1) — 1 month + 7 days after quarter end
-      if (VAT_PAYMENT_MONTHS.includes(mi)) {
-        vatPayment = vatPending;
-        vatPending = 0;
-      }
-
-      const totalCosts = fixedCosts + projectCosts + vatPayment;
-      balance += income - totalCosts;
-
-      return {
-        ...mr, monthIdx: mi, income, fixedCosts, projectCosts, vatPayment, totalCosts, balance,
-        showCount: monthShows.length, otherIncome: otherIncomeTotal,
-      };
-    });
-  }, [shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings]);
+  const data = useMemo(() => calculateCashflow({
+    shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings
+  }), [shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings]);
 
   // Page title
   const pageTitle = NAV_ITEMS.find(n => n.id === page)?.label || "Dashboard";
@@ -1484,7 +1909,7 @@ function SparkCashflow() {
         {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} />}
         {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
         {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} />}
-        {page === "vat" && <VATPage data={data} vatSettings={vatSettings} />}
+        {page === "vat" && <VATPage data={data} vatSettings={vatSettings} ctSettings={null} />}
         {page === "monthly" && <MonthlyDetailPage data={data} />}
         {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
           otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings} />}
@@ -1603,16 +2028,38 @@ function SparkCashflow() {
     function SparkCashflowWithSave() {
       const loaded = window.__SPARK_INITIAL_DATA || null;
 
+      // Migrate opening balance: if old save has openingBalance number but no openingBalances object,
+      // create openingBalances from the old number
+      const migrateOpeningBalances = (loaded) => {
+        if (loaded?.openingBalances) return loaded.openingBalances;
+        if (loaded?.openingBalance != null) {
+          return {
+            ...DEFAULT_OPENING_BALANCES,
+            bankAccounts: [{ id: "ba_1", name: "Main Account", amount: loaded.openingBalance }],
+          };
+        }
+        return DEFAULT_OPENING_BALANCES;
+      };
+
       const [page, setPage] = useState("dashboard");
       const [scenario, setScenario] = useState("expected");
       const [timeframe, setTimeframe] = useState(loaded?.timeframe || 12);
-      const [openingBalance, setOpeningBalance] = useState(loaded?.openingBalance ?? DEFAULT_OPENING_BALANCE);
       const [shows, setShows] = useState(migrateShowDates(loaded?.shows || DEFAULT_SHOWS));
       const [costGroups, setCostGroups] = useState(loaded?.costGroups || DEFAULT_COST_GROUPS);
       const [projects, setProjects] = useState(loaded?.projects || DEFAULT_PROJECTS);
       const [otherIncome, setOtherIncome] = useState(loaded?.otherIncome || DEFAULT_OTHER_INCOME);
       const [vatSettings] = useState({ rate: 0.20, reclaimRate: 0.20, paymentDelay: 1 });
+      const [loans, setLoans] = useState(loaded?.loans || DEFAULT_LOANS);
+      const [ctSettings, setCtSettings] = useState(loaded?.ctSettings || DEFAULT_CT_SETTINGS);
+      const [openingBalances, setOpeningBalances] = useState(() => migrateOpeningBalances(loaded));
+      const [showSplitView, setShowSplitView] = useState(false);
       const [saveStatus, setSaveStatus] = useState('idle');
+
+      // Effective opening balance = sum of bank accounts
+      const openingBalance = useMemo(() =>
+        openingBalances.bankAccounts.reduce((sum, ba) => sum + (ba.amount || 0), 0),
+        [openingBalances.bankAccounts]
+      );
 
       // Auto-save with debounce
       const saveTimer = useRef(null);
@@ -1625,63 +2072,23 @@ function SparkCashflow() {
         saveTimer.current = setTimeout(async () => {
           const ok = await API.saveData({
             openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe,
+            loans, ctSettings, openingBalances,
             savedAt: new Date().toISOString()
           });
           setSaveStatus(ok ? 'saved' : 'error');
           if (ok) setTimeout(() => setSaveStatus('idle'), 2000);
         }, 2000);
         return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-      }, [openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe]);
+      }, [openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe, loans, ctSettings, openingBalances]);
 
       // Generate month range
       const monthRange = useMemo(() => generateMonthRange(2026, 0, timeframe), [timeframe]);
 
       // Core calculation
-      const data = useMemo(() => {
-        const sc = SCENARIOS[scenario];
-        let balance = openingBalance;
-        let vatAccumulator = 0;
-        let vatPending = 0;
-
-        return monthRange.map((mr) => {
-          const mi = monthIndex(mr.month);
-          const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
-          const rawShowIncome = monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0);
-          let otherIncomeTotal = 0;
-          otherIncome.filter(oi => oi.enabled).forEach(oi => {
-            if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) otherIncomeTotal += oi.amount;
-            if (oi.type === "monthly") {
-              const startK = monthKey(oi.startMonth, oi.startYear);
-              if (mr.key >= startK) otherIncomeTotal += oi.amount;
-            }
-          });
-          const income = (rawShowIncome + otherIncomeTotal) * sc.incMult;
-          const rawFixed = costGroups.filter(g => g.enabled).reduce((s, g) =>
-            s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
-          const fixedCosts = rawFixed * sc.costMult;
-          let projectCosts = 0;
-          projects.filter(p => p.enabled).forEach(p => {
-            p.items.forEach(item => {
-              if (item.type === "one-off" && item.month === mr.month && item.year === mr.year) projectCosts += item.amount;
-              if (item.type === "monthly") {
-                const startK = monthKey(item.startMonth, item.startYear);
-                if (mr.key >= startK) projectCosts += item.amount;
-              }
-            });
-          });
-          // UK VAT — quarters end Mar, Jun, Sep, Dec; payment 1mo+7d after
-          const vatCollected = income * vatSettings.rate;
-          const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
-          vatAccumulator += vatCollected - vatOnPurchases;
-          let vatPayment = 0;
-          if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPending = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
-          if (VAT_PAYMENT_MONTHS.includes(mi)) { vatPayment = vatPending; vatPending = 0; }
-          const totalCosts = fixedCosts + projectCosts + vatPayment;
-          balance += income - totalCosts;
-          return { ...mr, monthIdx: mi, income, fixedCosts, projectCosts, vatPayment, totalCosts, balance,
-            showCount: monthShows.length, otherIncome: otherIncomeTotal };
-        });
-      }, [shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings]);
+      const data = useMemo(() => calculateCashflow({
+        shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings,
+        loans, ctSettings, openingBalances
+      }), [shows, costGroups, projects, otherIncome, openingBalance, scenario, monthRange, vatSettings, loans, ctSettings, openingBalances]);
 
       const pageTitle = NAV_ITEMS.find(n => n.id === page)?.label || "Dashboard";
 
@@ -1753,25 +2160,61 @@ function SparkCashflow() {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ background: C.surface, borderRadius: 8, padding: "8px 14px",
-                  border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                {["pipeline","other_income","costs","projects","loans","scenarios"].includes(page) && (
+                  <button onClick={() => setShowSplitView(!showSplitView)}
+                    style={{ background: showSplitView ? C.accent : C.surface, color: showSplitView ? "#fff" : C.textMuted,
+                      border: `1px solid ${showSplitView ? C.accent : C.border}`, borderRadius: 8, padding: "8px 14px",
+                      cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                    📊 {showSplitView ? "Chart On" : "Chart Off"}
+                  </button>
+                )}
+                <div onClick={() => setPage("settings")} style={{ background: C.surface, borderRadius: 8, padding: "8px 14px",
+                  border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                  title="Click to edit in Settings">
                   <span style={{ fontSize: 11, color: C.textMuted }}>Opening Balance</span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
-                    <EditableCell value={openingBalance} onChange={setOpeningBalance} />
-                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>{fmt(openingBalance)}</span>
                 </div>
               </div>
             </div>
 
-            {page === "dashboard" && <DashboardPage data={data} openingBalance={openingBalance} scenario={scenario} />}
-            {page === "pipeline" && <PipelinePage shows={shows} setShows={setShows} />}
-            {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} />}
-            {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
-            {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} />}
-            {page === "vat" && <VATPage data={data} vatSettings={vatSettings} />}
-            {page === "monthly" && <MonthlyDetailPage data={data} />}
-            {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
-              otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings} />}
+            {/* Split View Wrapper for applicable pages */}
+            {(() => {
+              const splitPages = ["pipeline","other_income","costs","projects","loans","scenarios"];
+              const useSplit = showSplitView && splitPages.includes(page);
+              const content = (
+                <React.Fragment>
+                  {page === "dashboard" && <DashboardPage data={data} openingBalance={openingBalance} scenario={scenario} loans={loans} ctSettings={ctSettings} />}
+                  {page === "pipeline" && <PipelinePage shows={shows} setShows={setShows} />}
+                  {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} />}
+                  {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
+                  {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} />}
+                  {page === "loans" && <LoansPage loans={loans} setLoans={setLoans} monthRange={monthRange} />}
+                  {page === "vat" && <VATPage data={data} vatSettings={vatSettings} ctSettings={ctSettings} />}
+                  {page === "monthly" && <MonthlyDetailPage data={data} />}
+                  {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
+                    otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings}
+                    loans={loans} ctSettings={ctSettings} openingBalances={openingBalances} />}
+                  {page === "settings" && <SettingsPage openingBalances={openingBalances} setOpeningBalances={setOpeningBalances}
+                    ctSettings={ctSettings} setCtSettings={setCtSettings} vatSettings={vatSettings} />}
+                </React.Fragment>
+              );
+              if (!useSplit) return content;
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
+                  <div>{content}</div>
+                  <div style={{ position: "sticky", top: 20, alignSelf: "start" }}>
+                    <div style={{ background: C.surface, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>Cashflow Preview</div>
+                      <CashflowChart data={data} height={220} showLegend={false} />
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: C.textMuted }}>
+                        <span>End: {data.length > 0 ? fmt(data[data.length-1].balance) : "—"}</span>
+                        <span>Low: {data.length > 0 ? fmt(Math.min(...data.map(d=>d.balance))) : "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       );
