@@ -7,7 +7,21 @@
 //
 // Replaces the PHP session-based auth with JWT in a cookie.
 
+const crypto = require('crypto');
 const { createToken, getAuthUser, setTokenCookie, clearTokenCookie } = require('./_lib/jwt');
+
+/** Timing-safe string comparison to prevent timing attacks */
+function safeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    // Compare against self to keep constant time, then return false
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 module.exports = async function handler(req, res) {
   // ─── CORS / preflight ─────────────────────────────────
@@ -27,7 +41,16 @@ module.exports = async function handler(req, res) {
   // ─── POST — login ─────────────────────────────────────
   if (method === 'POST') {
     const { username, password } = req.body || {};
-    const user = (username || '').toLowerCase().trim();
+
+    // Input validation
+    if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    if (username.length > 64 || password.length > 128) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    const user = username.toLowerCase().trim();
 
     // Load user accounts from env var (JSON string)
     let users = {};
@@ -37,7 +60,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Server config error' });
     }
 
-    if (users[user] && users[user] === password) {
+    if (users[user] && safeCompare(users[user], password)) {
       const token = createToken(user);
       res.setHeader('Set-Cookie', setTokenCookie(token));
       return res.json({ success: true, user });

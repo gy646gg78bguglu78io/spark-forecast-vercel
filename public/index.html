@@ -5,12 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spark! Cashflow Forecaster</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2244%22 fill=%22%23f59e0b%22/><path d=%22M55 20L35 55h15l-5 25 20-35H50z%22 fill=%22%230f172a%22/></svg>">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     #root { min-height: 100vh; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -74,6 +75,98 @@ const C = {
   yellow: "#eab308",
   yellowBg: "rgba(234,179,8,0.1)",
 };
+
+// ─── SVG Icon System ─────────────────────────────────────
+// Clean single-colour SVG icons that accept color prop
+function Icon({ name, size = 16, color = C.textMuted, style: extraStyle = {} }) {
+  const paths = {
+    // Navigation
+    dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
+    pipeline: <><circle cx="12" cy="12" r="9" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M8 12l3 3 5-6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    income: <><path d="M12 2v20M17 7l-5-5-5 5" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M5 18h14" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    costs: <><rect x="3" y="4" width="18" height="16" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M3 10h18" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M8 14h4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    projects: <><path d="M4 6h16M4 12h16M4 18h10" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /><circle cx="19" cy="18" r="3" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    loans: <><path d="M2 17l10-10 4 4 6-6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M16 5h6v6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    vat: <><path d="M4 4h16v4l-3 4 3 4v4H4v-4l3-4-3-4z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /></>,
+    monthly: <><rect x="3" y="4" width="18" height="18" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M3 10h18M8 2v4M16 2v4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    scenarios: <><path d="M16 3h5v5M4 20L20.7 3.3" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 16v5h-5M15 15l5.7 5.7" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M4 4l5 5" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    settings: <><circle cx="12" cy="12" r="3" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M12 1v2m0 18v2m-9-11h2m18 0h2m-4.2-6.8l-1.4 1.4M5.6 18.4l-1.4 1.4M18.4 18.4l1.4 1.4M5.6 5.6L4.2 4.2" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+
+    // KPI & status icons
+    trendUp: <><path d="M2 17l10-10 4 4 6-6" fill="none" strokeWidth="2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M16 5h6v6" fill="none" strokeWidth="2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    trendDown: <><path d="M2 7l10 10 4-4 6 6" fill="none" strokeWidth="2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M16 19h6v-6" fill="none" strokeWidth="2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    wallet: <><rect x="2" y="6" width="20" height="14" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M2 10h20" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="17" cy="15" r="1.5" fill="currentColor" /></>,
+    bank: <><path d="M3 21h18M3 10h18M5 6l7-4 7 4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M5 10v8M9 10v8M15 10v8M19 10v8" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    clock: <><circle cx="12" cy="12" r="10" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M12 6v6l4 2" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    alert: <><path d="M12 2L2 20h20L12 2z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /><path d="M12 9v4M12 16v.01" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    check: <><path d="M5 12l5 5L20 7" fill="none" strokeWidth="2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    target: <><circle cx="12" cy="12" r="10" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="12" cy="12" r="6" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="12" cy="12" r="2" fill="currentColor" /></>,
+    bolt: <><path d="M13 2L4.5 13H12l-1 9 8.5-11H12z" fill="currentColor" /></>,
+    refresh: <><path d="M1 4v6h6M23 20v-6h-6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M20.5 9A9 9 0 005.6 5.6L1 10m22 4l-4.6 4.4A9 9 0 013.5 15" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    pound: <><path d="M7 20h10M10 20V10a4 4 0 018 0M6 14h8" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    calendar: <><rect x="3" y="4" width="18" height="18" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M3 10h18M8 2v4M16 2v4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    chart: <><path d="M4 20V10M10 20V4M16 20v-8M22 20v-4" fill="none" strokeWidth="2.5" stroke="currentColor" strokeLinecap="round" /></>,
+
+    // Action icons
+    trash: <><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    close: <><path d="M6 6l12 12M18 6L6 18" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    plus: <><path d="M12 4v16M4 12h16" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    money: <><path d="M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+
+    // Cost group icons
+    building: <><rect x="4" y="6" width="16" height="16" rx="1" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M8 10h2M14 10h2M8 14h2M14 14h2M10 22v-4h4v4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    monitor: <><rect x="3" y="3" width="18" height="14" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M8 21h8M12 17v4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    truck: <><rect x="1" y="8" width="14" height="10" rx="1" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M15 12h5l3 4v2h-8V12z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /><circle cx="6" cy="19" r="2" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="19" cy="19" r="2" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    users: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="9" cy="7" r="4" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    shield: <><path d="M12 2l8 4v6c0 5.5-3.8 10.7-8 12-4.2-1.3-8-6.5-8-12V6l8-4z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /></>,
+    drums: <><ellipse cx="12" cy="6" rx="8" ry="4" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M4 6v8c0 2.2 3.6 4 8 4s8-1.8 8-4V6" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M4 10c0 2.2 3.6 4 8 4s8-1.8 8-4" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    coins: <><circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M15 7.5a7 7 0 110 9" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M9 6v6M7 9h4" fill="none" strokeWidth="1.5" stroke="currentColor" strokeLinecap="round" /></>,
+    folder: <><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+
+    // Project icons
+    wrench: <><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.8-3.8a6 6 0 01-7.5 7.5L6.7 20.3a2.1 2.1 0 01-3-3L11 10a6 6 0 017.5-7.5l-3.8 3.8z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /></>,
+    film: <><rect x="2" y="4" width="20" height="16" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M7 2v4M17 2v4M2 12h20" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    book: <><path d="M4 19.5A2.5 2.5 0 016.5 17H20" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M4 4.5A2.5 2.5 0 016.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15z" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    sparkle: <><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /></>,
+    shirt: <><path d="M16 3h5l-3 8h-2V3zM8 3H3l3 8h2V3zM8 3h8v18H8z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /></>,
+    home: <><path d="M3 12l9-9 9 9" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M5 10v10a1 1 0 001 1h12a1 1 0 001-1V10" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    lightbulb: <><path d="M9 18h6M12 2a7 7 0 00-3 13.3V17h6v-1.7A7 7 0 0012 2z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /></>,
+    music: <><path d="M9 18V5l12-2v13" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="6" cy="18" r="3" fill="none" strokeWidth="2" stroke="currentColor" /><circle cx="18" cy="16" r="3" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    star: <><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3L5.8 21 7 14.2 2 9.3l6.9-1z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /></>,
+    box: <><path d="M21 8V21H3V8M1 3h22v5H1z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /><path d="M10 12h4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    palette: <><circle cx="13.5" cy="6.5" r="1.5" fill="currentColor" /><circle cx="17.5" cy="10.5" r="1.5" fill="currentColor" /><circle cx="8.5" cy="7.5" r="1.5" fill="currentColor" /><circle cx="6.5" cy="12" r="1.5" fill="currentColor" /><path d="M12 2a10 10 0 00-1 19.9c.6.1 1-.5 1-1v-.5c0-1.7 1.8-2.5 3-1.5.6.5 1.5.7 2.2.4A10 10 0 0012 2z" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    hardhat: <><path d="M2 18h20M4 18v-4a8 8 0 0116 0v4" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /><path d="M12 2v6" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    mic: <><rect x="9" y="2" width="6" height="10" rx="3" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M5 10a7 7 0 0014 0M12 17v4M8 21h8" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    phone: <><rect x="5" y="2" width="14" height="20" rx="2" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M12 18h.01" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" /></>,
+    globe: <><circle cx="12" cy="12" r="10" fill="none" strokeWidth="2" stroke="currentColor" /><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    circus: <><path d="M12 2L2 20h20L12 2z" fill="none" strokeWidth="2" stroke="currentColor" strokeLinejoin="round" /><path d="M12 2v18M7 11h10" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+    hammer: <><path d="M15 12l-8.5 8.5a2.1 2.1 0 01-3-3L12 9" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" /><path d="M17.6 2.6a2.1 2.1 0 013 3l-3.8 3.8-3-3z" fill="none" strokeWidth="2" stroke="currentColor" /></>,
+  };
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, color, ...extraStyle }}>
+      {paths[name] || paths.bolt}
+    </svg>
+  );
+}
+
+// Map old emoji icon names to SVG icon names for cost groups & projects
+const ICON_MAP = {
+  "🏢": "building", "💻": "monitor", "🚐": "truck", "👥": "users", "🏦": "shield",
+  "🥁": "drums", "💰": "coins", "🎯": "target", "👔": "shirt", "✨": "sparkle",
+  "🔧": "wrench", "🎬": "film", "📚": "book", "🏠": "home", "💡": "lightbulb",
+  "🎵": "music", "🎪": "circus", "🛠️": "hammer", "📦": "box", "🎨": "palette",
+  "🏗️": "hardhat", "🎤": "mic", "📱": "phone", "🌍": "globe", "⚡": "bolt", "📁": "folder",
+};
+
+// Render icon from either SVG name or legacy emoji
+function GroupIcon({ icon, size = 18, color = C.textMuted }) {
+  const svgName = ICON_MAP[icon] || icon;
+  if (Object.keys(ICON_MAP).includes(icon) || !icon.match(/[\u{1F300}-\u{1FFFF}]/u)) {
+    return <Icon name={svgName} size={size} color={color} />;
+  }
+  return <span style={{ fontSize: size * 0.9 }}>{icon}</span>;
+}
 
 // ─── Default Data (from Brixx actuals) ───────────────────
 const DEFAULT_OPENING_BALANCE = 112250;
@@ -527,14 +620,18 @@ function StatusBadge({ status }) {
 function KPICard({ label, value, subtitle, color = C.text, icon, trend }) {
   return (
     <div style={{ background: C.surface, borderRadius: 10, padding: "16px 20px", flex: 1, minWidth: 150,
-      border: `1px solid ${C.border}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-        {icon && <span style={{ fontSize: 16 }}>{icon}</span>}
-        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+      border: `1px solid ${C.border}`, transition: "border-color 0.2s" }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = color + "66"}
+      onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+        {icon && <Icon name={icon} size={15} color={color} />}
+        <span style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</span>
       </div>
       <div style={{ fontSize: 26, fontWeight: 800, color, letterSpacing: -0.5 }}>{value}</div>
-      {subtitle && <div style={{ fontSize: 11, color: trend === "up" ? C.green : trend === "down" ? C.red : C.textMuted, marginTop: 2 }}>
-        {trend === "up" && "▲ "}{trend === "down" && "▼ "}{subtitle}
+      {subtitle && <div style={{ fontSize: 11, color: trend === "up" ? C.green : trend === "down" ? C.red : C.textMuted, marginTop: 3 }}>
+        {trend === "up" && <Icon name="trendUp" size={11} color={C.green} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />}
+        {trend === "down" && <Icon name="trendDown" size={11} color={C.red} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />}
+        {subtitle}
       </div>}
     </div>
   );
@@ -605,14 +702,18 @@ function EditableText({ value, onChange, style = {} }) {
   );
 }
 
-// Small icon button
+// Small icon button — accepts SVG name or legacy string
 function IconBtn({ icon, onClick, color = C.textDim, hoverColor = C.red, title = "" }) {
+  const [hovered, setHovered] = useState(false);
+  const svgMap = { "✕": "close", "🗑️": "trash" };
+  const svgName = svgMap[icon] || (typeof icon === "string" && !icon.match(/[\u{1F300}-\u{1FFFF}]/u) ? icon : null);
   return (
     <button onClick={onClick} title={title}
-      style={{ background: "none", border: "none", color, cursor: "pointer", fontSize: 13, padding: "2px 4px", lineHeight: 1 }}
-      onMouseEnter={e => e.currentTarget.style.color = hoverColor}
-      onMouseLeave={e => e.currentTarget.style.color = color}>
-      {icon}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 1,
+        transition: "transform 0.15s", transform: hovered ? "scale(1.15)" : "scale(1)" }}>
+      {svgName ? <Icon name={svgName} size={13} color={hovered ? hoverColor : color} />
+        : <span style={{ fontSize: 13, color: hovered ? hoverColor : color }}>{icon}</span>}
     </button>
   );
 }
@@ -623,28 +724,28 @@ function AddButton({ label, onClick, style: extraStyle = {} }) {
     <button onClick={onClick}
       style={{ padding: "6px 14px", borderRadius: 6, border: `1px dashed ${C.border}`,
         background: "transparent", color: C.textMuted, fontSize: 12, cursor: "pointer",
-        transition: "all 0.15s", ...extraStyle }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}>
+        transition: "all 0.2s", display: "inline-flex", alignItems: "center", gap: 4, ...extraStyle }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; e.currentTarget.style.background = C.accent + "0a"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; e.currentTarget.style.background = "transparent"; }}>
       {label}
     </button>
   );
 }
 
-const ICON_OPTIONS = ["🎯","🚐","👔","✨","🔧","🎬","📚","🏠","💡","🎵","🎪","🛠️","📦","🎨","🏗️","💻","🎤","📱","🌍","⚡"];
+const ICON_OPTIONS = ["target","truck","shirt","sparkle","wrench","film","book","home","lightbulb","music","circus","hammer","box","palette","hardhat","monitor","mic","phone","globe","bolt"];
 
 // ─── Sidebar Nav ─────────────────────────────────────────
 const NAV_ITEMS = [
-  { id: "dashboard", icon: "📊", label: "Dashboard" },
-  { id: "pipeline", icon: "🎭", label: "Show Pipeline" },
-  { id: "other_income", icon: "💷", label: "Other Income" },
-  { id: "costs", icon: "📋", label: "Monthly Costs" },
-  { id: "projects", icon: "🔧", label: "Projects" },
-  { id: "loans", icon: "🏦", label: "Loans" },
-  { id: "vat", icon: "🏛️", label: "VAT & Tax" },
-  { id: "monthly", icon: "📅", label: "Monthly Detail" },
-  { id: "scenarios", icon: "🔀", label: "Scenarios" },
-  { id: "settings", icon: "⚙️", label: "Settings" },
+  { id: "dashboard", icon: "dashboard", label: "Dashboard" },
+  { id: "pipeline", icon: "pipeline", label: "Show Pipeline" },
+  { id: "other_income", icon: "income", label: "Other Income" },
+  { id: "costs", icon: "costs", label: "Monthly Costs" },
+  { id: "projects", icon: "projects", label: "Projects" },
+  { id: "loans", icon: "loans", label: "Loans" },
+  { id: "vat", icon: "vat", label: "VAT & Tax" },
+  { id: "monthly", icon: "monthly", label: "Monthly Detail" },
+  { id: "scenarios", icon: "scenarios", label: "Scenarios" },
+  { id: "settings", icon: "settings", label: "Settings" },
 ];
 
 function Sidebar({ active, onNav, scenario, onScenario, timeframe, onTimeframe }) {
@@ -653,8 +754,11 @@ function Sidebar({ active, onNav, scenario, onScenario, timeframe, onTimeframe }
       display: "flex", flexDirection: "column", height: "100vh", position: "fixed", left: 0, top: 0, zIndex: 100 }}>
       {/* Logo */}
       <div style={{ padding: "20px 16px 12px", borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 24 }}>⚡</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${C.accent}, ${C.accentDim})`,
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="bolt" size={18} color={C.bg} />
+          </div>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, color: C.accent, letterSpacing: -0.5 }}>SPARK!</div>
             <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Cashflow Forecaster</div>
@@ -673,7 +777,7 @@ function Sidebar({ active, onNav, scenario, onScenario, timeframe, onTimeframe }
               transition: "all 0.15s" }}
             onMouseEnter={e => { if (active !== item.id) e.currentTarget.style.background = C.sidebarHover; }}
             onMouseLeave={e => { if (active !== item.id) e.currentTarget.style.background = "transparent"; }}>
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <Icon name={item.icon} size={16} color={active === item.id ? C.accent : C.textMuted} />
             <span>{item.label}</span>
           </div>
         ))}
@@ -749,24 +853,24 @@ function DashboardPage({ data, openingBalance, scenario, loans, ctSettings }) {
     <div>
       {/* KPI Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <KPICard label="Cash In" value={fmtK(totalIncome)} icon="📈"
+        <KPICard label="Cash In" value={fmtK(totalIncome)} icon="trendUp"
           subtitle={`${data.length} months, ${sc.label}`} color={C.green} />
-        <KPICard label="Cash Out" value={fmtK(totalCosts)} icon="📉" color={C.red}
+        <KPICard label="Cash Out" value={fmtK(totalCosts)} icon="trendDown" color={C.red}
           subtitle={`Avg ${fmtK(totalCosts / Math.max(data.length, 1))}/mo`} />
-        <KPICard label="Net Cash" value={fmtK(netCash)} icon="💰"
+        <KPICard label="Net Cash" value={fmtK(netCash)} icon="wallet"
           color={netCash >= 0 ? C.green : C.red}
           subtitle={netCash >= 0 ? "Positive cashflow" : "Negative — review costs"} trend={netCash >= 0 ? "up" : "down"} />
-        <KPICard label="End Balance" value={fmtK(endBalance)} icon="🏦" color={C.blue}
+        <KPICard label="End Balance" value={fmtK(endBalance)} icon="bank" color={C.blue}
           subtitle={`Started at ${fmtK(openingBalance)}`} />
-        <KPICard label="Runway" value={`${runwayMonths} mo`} icon="⏱️"
+        <KPICard label="Runway" value={`${runwayMonths} mo`} icon="clock"
           color={runwayMonths > 6 ? C.green : runwayMonths > 3 ? C.accent : C.red}
           subtitle={runwayMonths > 6 ? "Healthy" : "Monitor closely"} />
-        <KPICard label="Lowest Point" value={fmtK(lowestBalance)} icon="⚠️"
+        <KPICard label="Lowest Point" value={fmtK(lowestBalance)} icon="alert"
           color={lowestBalance > 20000 ? C.green : lowestBalance > 0 ? C.accent : C.red}
           subtitle={lowestMonth ? lowestMonth.label : ""} />
-        {totalLoanPayments > 0 && <KPICard label="Loan Repayments" value={fmtK(totalLoanPayments)} icon="🏦"
+        {totalLoanPayments > 0 && <KPICard label="Loan Repayments" value={fmtK(totalLoanPayments)} icon="bank"
           color={C.textMuted} subtitle={`${(loans || []).filter(l => l.enabled).length} active loan(s)`} />}
-        {totalCTPayments > 0 && <KPICard label="Corporation Tax" value={fmtK(totalCTPayments)} icon="🏛️"
+        {totalCTPayments > 0 && <KPICard label="Corporation Tax" value={fmtK(totalCTPayments)} icon="vat"
           color={C.red} subtitle={`${ctSettings?.rate || 19}% rate`} />}
       </div>
 
@@ -864,13 +968,13 @@ function PipelinePage({ shows, setShows }) {
     <div>
       {/* Pipeline Summary Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <KPICard label="Confirmed" value={fmtK(totals.confirmed)} color={C.green} icon="✅"
+        <KPICard label="Confirmed" value={fmtK(totals.confirmed)} color={C.green} icon="check"
           subtitle={`${shows.filter(s => s.status === "confirmed").length} shows`} />
-        <KPICard label="Likely (70%)" value={fmtK(totals.likely)} color={C.accent} icon="🎯"
+        <KPICard label="Likely (70%)" value={fmtK(totals.likely)} color={C.accent} icon="target"
           subtitle={`${shows.filter(s => s.status === "likely").length} shows`} />
-        <KPICard label="Hoped (40%)" value={fmtK(totals.hoped)} color={C.blue} icon="🤞"
+        <KPICard label="Hoped (40%)" value={fmtK(totals.hoped)} color={C.blue} icon="star"
           subtitle={`${shows.filter(s => s.status === "hoped").length} shows`} />
-        <KPICard label="Weighted Total" value={fmtK(weighted)} color={C.purple} icon="⚡"
+        <KPICard label="Weighted Total" value={fmtK(weighted)} color={C.purple} icon="bolt"
           subtitle="Probability-adjusted" />
       </div>
 
@@ -943,10 +1047,7 @@ function PipelinePage({ shows, setShows }) {
                   {fmt(show.fee * STATUS_CONFIG[show.status].prob)}
                 </td>
                 <td style={{ padding: "8px 12px", textAlign: "right" }}>
-                  <button onClick={() => removeShow(show.id)}
-                    style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 14, padding: 4 }}
-                    onMouseEnter={e => e.currentTarget.style.color = C.red}
-                    onMouseLeave={e => e.currentTarget.style.color = C.textDim}>✕</button>
+                  <IconBtn icon="close" onClick={() => removeShow(show.id)} />
                 </td>
               </tr>
             ))}
@@ -981,7 +1082,7 @@ function CostsPage({ costGroups, setCostGroups }) {
   const renameGroup = (gid, name) => setCostGroups(costGroups.map(g => g.id === gid ? { ...g, name } : g));
   const removeGroup = (gid) => setCostGroups(costGroups.filter(g => g.id !== gid));
   const addGroup = () => setCostGroups([...costGroups, {
-    id: `grp_${Date.now()}`, name: "New Group", icon: "📁", enabled: true, items: []
+    id: `grp_${Date.now()}`, name: "New Group", icon: "folder", enabled: true, items: []
   }]);
 
   const pieData = costGroups.filter(g => g.enabled).map(g => ({
@@ -993,9 +1094,9 @@ function CostsPage({ costGroups, setCostGroups }) {
     <div>
       {/* Summary */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <KPICard label="Total Monthly" value={fmt(totalMonthly)} color={C.red} icon="📊"
+        <KPICard label="Total Monthly" value={fmt(totalMonthly)} color={C.red} icon="chart"
           subtitle={`${costGroups.filter(g => g.enabled).length}/${costGroups.length} groups active`} />
-        <KPICard label="Annual Estimate" value={fmtK(totalMonthly * 12)} color={C.orange} icon="📅"
+        <KPICard label="Annual Estimate" value={fmtK(totalMonthly * 12)} color={C.orange} icon="calendar"
           subtitle="Based on current monthly" />
         <div style={{ background: C.surface, borderRadius: 10, padding: "12px 16px", flex: 1.5, minWidth: 200,
           border: `1px solid ${C.border}`, display: "flex", alignItems: "center" }}>
@@ -1012,7 +1113,7 @@ function CostsPage({ costGroups, setCostGroups }) {
             {pieData.map((d, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                <span style={{ color: C.textMuted }}>{d.icon} {fmt(d.value)}</span>
+                <span style={{ color: C.textMuted, display: "inline-flex", alignItems: "center", gap: 3 }}><GroupIcon icon={d.icon} size={10} color={C.textMuted} /> {fmt(d.value)}</span>
               </div>
             ))}
           </div>
@@ -1030,7 +1131,7 @@ function CostsPage({ costGroups, setCostGroups }) {
               padding: "12px 16px", borderBottom: group.enabled ? `1px solid ${C.border}22` : "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Toggle on={group.enabled} onChange={() => toggleGroup(group.id)} />
-                <span style={{ fontSize: 18 }}>{group.icon}</span>
+                <GroupIcon icon={group.icon} size={18} color={group.enabled ? C.accent : C.textDim} />
                 <EditableText value={group.name} onChange={v => renameGroup(group.id, v)}
                   style={{ fontSize: 14, fontWeight: 700, color: C.text }} />
                 <span style={{ fontSize: 12, color: C.textMuted }}>({group.items.length})</span>
@@ -1102,8 +1203,8 @@ function ProjectsPage({ projects, setProjects, planStartMonth, planStartYear }) 
     <div>
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
         <KPICard label="Active Projects" value={`${projects.filter(p => p.enabled).length}/${projects.length}`}
-          color={C.purple} icon="🔧" subtitle="Toggle to model what-if" />
-        <KPICard label="Total Cost (Active)" value={fmtK(totalEnabled)} color={C.orange} icon="💸"
+          color={C.purple} icon="wrench" subtitle="Toggle to model what-if" />
+        <KPICard label="Total Cost (Active)" value={fmtK(totalEnabled)} color={C.orange} icon="money"
           subtitle="One-off + annualized recurring" />
       </div>
 
@@ -1114,7 +1215,7 @@ function ProjectsPage({ projects, setProjects, planStartMonth, planStartYear }) 
             transition: "all 0.2s" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>{proj.icon}</span>
+                <GroupIcon icon={proj.icon} size={20} color={proj.enabled ? C.accent : C.textDim} />
                 <EditableText value={proj.name} onChange={v => renameProject(proj.id, v)}
                   style={{ fontSize: 14, fontWeight: 700, color: C.text }} />
               </div>
@@ -1204,11 +1305,11 @@ function OtherIncomePage({ otherIncome, setOtherIncome, planStartMonth, planStar
   return (
     <div>
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <KPICard label="Monthly Recurring" value={fmt(totalMonthly)} color={C.green} icon="🔄"
+        <KPICard label="Monthly Recurring" value={fmt(totalMonthly)} color={C.green} icon="refresh"
           subtitle={`${otherIncome.filter(i => i.enabled && i.type === "monthly").length} active streams`} />
-        <KPICard label="One-Off Income" value={fmt(totalOneOff)} color={C.cyan} icon="💷"
+        <KPICard label="One-Off Income" value={fmt(totalOneOff)} color={C.cyan} icon="pound"
           subtitle={`${otherIncome.filter(i => i.enabled && i.type === "one-off").length} items`} />
-        <KPICard label="Annual (Recurring)" value={fmtK(totalMonthly * 12)} color={C.purple} icon="📅"
+        <KPICard label="Annual (Recurring)" value={fmtK(totalMonthly * 12)} color={C.purple} icon="calendar"
           subtitle="Recurring only" />
       </div>
 
@@ -1621,13 +1722,13 @@ function LoansPage({ loans, setLoans, monthRange }) {
     <div>
       {/* KPI Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <KPICard label="Total Outstanding" value={fmtK(totalOutstanding)} icon="🏦" color={C.blue}
+        <KPICard label="Total Outstanding" value={fmtK(totalOutstanding)} icon="bank" color={C.blue}
           subtitle={`${enabledLoans.length} active loan(s)`} />
-        <KPICard label="Monthly Repayments" value={fmt(Math.round(totalMonthlyPayments))} icon="📅" color={C.red}
+        <KPICard label="Monthly Repayments" value={fmt(Math.round(totalMonthlyPayments))} icon="calendar" color={C.red}
           subtitle="Combined payments" />
-        <KPICard label="Total Interest" value={fmtK(totalInterest)} icon="📈" color={C.orange}
+        <KPICard label="Total Interest" value={fmtK(totalInterest)} icon="trendUp" color={C.orange}
           subtitle="Over forecast period" />
-        <KPICard label="Capital Repaid" value={fmtK(totalCapital)} icon="✅" color={C.green}
+        <KPICard label="Capital Repaid" value={fmtK(totalCapital)} icon="check" color={C.green}
           subtitle="Over forecast period" />
       </div>
 
@@ -1693,7 +1794,7 @@ function LoansPage({ loans, setLoans, monthRange }) {
                   </td>
                   <td style={{ padding: "8px 12px", textAlign: "center" }}>
                     <button onClick={() => deleteLoan(loan.id)}
-                      style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 14 }}>✕</button>
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}><Icon name="close" size={14} color={C.red} /></button>
                   </td>
                 </tr>
               );
@@ -1830,7 +1931,7 @@ function SettingsPage({ openingBalances, setOpeningBalances, ctSettings, setCtSe
             </div>
             {openingBalances.bankAccounts.length > 1 && (
               <button onClick={() => deleteBankAccount(ba.id)}
-                style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 14 }}>✕</button>
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}><Icon name="close" size={14} color={C.red} /></button>
             )}
           </div>
         ))}
@@ -2027,7 +2128,10 @@ function SparkCashflow() {
           background: '#0f172a' }}>
           <form onSubmit={handleSubmit} style={{ background: '#1e293b', borderRadius: 12, padding: '40px 32px',
             border: '1px solid #475569', width: 340, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>⚡</div>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: `linear-gradient(135deg, ${C.accent}, ${C.accentDim})`,
+              display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+              <Icon name="bolt" size={28} color={C.bg} />
+            </div>
             <div style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b', marginBottom: 4 }}>SPARK!</div>
             <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase',
               letterSpacing: 1, marginBottom: 24 }}>Cashflow Forecaster</div>
@@ -2064,8 +2168,8 @@ function SparkCashflow() {
           {status === 'saving' && <span style={{ display: 'inline-block', width: 8, height: 8,
             border: '2px solid #f59e0b', borderTopColor: 'transparent', borderRadius: '50%',
             animation: 'spin 0.6s linear infinite' }} />}
-          {status === 'saved' && '✓'}
-          {status === 'error' && '✕'}
+          {status === 'saved' && <Icon name="check" size={10} color="#22c55e" />}
+          {status === 'error' && <Icon name="close" size={10} color="#ef4444" />}
           {labels[status]}
         </div>
       );
@@ -2147,8 +2251,11 @@ function SparkCashflow() {
           <div style={{ width: 220, background: C.sidebar, borderRight: `1px solid ${C.border}`,
             display: "flex", flexDirection: "column", height: "100vh", position: "fixed", left: 0, top: 0, zIndex: 100 }}>
             <div style={{ padding: "20px 16px 12px", borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 24 }}>⚡</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${C.accent}, ${C.accentDim})`,
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon name="bolt" size={18} color={C.bg} />
+                </div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: C.accent, letterSpacing: -0.5 }}>SPARK!</div>
                   <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Cashflow Forecaster</div>
@@ -2166,7 +2273,7 @@ function SparkCashflow() {
                     transition: "all 0.15s" }}
                   onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.background = C.sidebarHover; }}
                   onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.background = "transparent"; }}>
-                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  <Icon name={item.icon} size={16} color={page === item.id ? C.accent : C.textMuted} />
                   <span>{item.label}</span>
                 </div>
               ))}

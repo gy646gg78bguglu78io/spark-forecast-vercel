@@ -3,9 +3,12 @@
 // ═══════════════════════════════════════════════════════════
 const jwt = require('jsonwebtoken');
 
-const SECRET = process.env.JWT_SECRET || 'spark-fallback-secret-change-me';
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is required');
+}
+const SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = 'spark_token';
-const MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
+const MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
 /** Create a signed JWT for the given username */
 function createToken(username) {
