@@ -1074,7 +1074,7 @@ function CostsPage({ costGroups, setCostGroups }) {
 }
 
 // ─── PROJECTS ────────────────────────────────────────────
-function ProjectsPage({ projects, setProjects }) {
+function ProjectsPage({ projects, setProjects, planStartMonth, planStartYear }) {
   const toggleProject = (pid) => setProjects(projects.map(p => p.id === pid ? { ...p, enabled: !p.enabled } : p));
   const renameProject = (pid, name) => setProjects(projects.map(p => p.id === pid ? { ...p, name } : p));
   const removeProject = (pid) => setProjects(projects.filter(p => p.id !== pid));
@@ -1086,8 +1086,8 @@ function ProjectsPage({ projects, setProjects }) {
   } : p));
   const addProjectItem = (pid, type) => setProjects(projects.map(p => p.id === pid ? {
     ...p, items: [...p.items, type === "one-off"
-      ? { id: `pi_${Date.now()}`, name: "New Item", amount: 0, type: "one-off", month: "Jan", year: 2026 }
-      : { id: `pi_${Date.now()}`, name: "New Item", amount: 0, type: "monthly", startMonth: "Jan", startYear: 2026 }
+      ? { id: `pi_${Date.now()}`, name: "New Item", amount: 0, type: "one-off", month: MONTHS[planStartMonth], year: planStartYear }
+      : { id: `pi_${Date.now()}`, name: "New Item", amount: 0, type: "monthly", startMonth: MONTHS[planStartMonth], startYear: planStartYear }
     ]
   } : p));
   const addProject = () => setProjects([...projects, {
@@ -1188,14 +1188,14 @@ function ProjectsPage({ projects, setProjects }) {
 }
 
 // ─── OTHER INCOME ────────────────────────────────────────
-function OtherIncomePage({ otherIncome, setOtherIncome }) {
+function OtherIncomePage({ otherIncome, setOtherIncome, planStartMonth, planStartYear }) {
   const updateItem = (id, field, value) => setOtherIncome(otherIncome.map(i => i.id === id ? { ...i, [field]: value } : i));
   const toggleItem = (id) => setOtherIncome(otherIncome.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i));
   const removeItem = (id) => setOtherIncome(otherIncome.filter(i => i.id !== id));
   const addItem = (type) => setOtherIncome([...otherIncome,
     type === "one-off"
-      ? { id: `oi_${Date.now()}`, name: "New Income", amount: 0, type: "one-off", month: "Jan", year: 2026, enabled: true, note: "" }
-      : { id: `oi_${Date.now()}`, name: "New Income", amount: 0, type: "monthly", startMonth: "Jan", startYear: 2026, enabled: true, note: "" }
+      ? { id: `oi_${Date.now()}`, name: "New Income", amount: 0, type: "one-off", month: MONTHS[planStartMonth], year: planStartYear, enabled: true, note: "" }
+      : { id: `oi_${Date.now()}`, name: "New Income", amount: 0, type: "monthly", startMonth: MONTHS[planStartMonth], startYear: planStartYear, enabled: true, note: "" }
   ]);
 
   const totalOneOff = otherIncome.filter(i => i.enabled && i.type === "one-off").reduce((s, i) => s + i.amount, 0);
@@ -1719,7 +1719,7 @@ function LoansPage({ loans, setLoans, monthRange }) {
 }
 
 // ─── SETTINGS PAGE ──────────────────────────────────────
-function SettingsPage({ openingBalances, setOpeningBalances, ctSettings, setCtSettings, vatSettings }) {
+function SettingsPage({ openingBalances, setOpeningBalances, ctSettings, setCtSettings, vatSettings, planStartMonth, setPlanStartMonth, planStartYear, setPlanStartYear }) {
   const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   const addBankAccount = () => {
@@ -1755,6 +1755,26 @@ function SettingsPage({ openingBalances, setOpeningBalances, ctSettings, setCtSe
 
   return (
     <div>
+      {/* Plan Start Date */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>Plan Start Date</div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12 }}>
+          Your forecast starts from this month. Set it to the current month and update your opening balances to match today's figures.
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <select value={planStartMonth}
+            onChange={e => setPlanStartMonth(parseInt(e.target.value))}
+            style={{ background: C.surfaceLight, border: `1px solid ${C.border}`, borderRadius: 6,
+              padding: "8px 12px", color: C.text, fontSize: 14, fontWeight: 600 }}>
+            {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+          </select>
+          <input type="number" value={planStartYear}
+            onChange={e => setPlanStartYear(parseInt(e.target.value) || new Date().getFullYear())}
+            style={{ background: C.surfaceLight, border: `1px solid ${C.border}`, borderRadius: 6,
+              padding: "8px 12px", width: 100, color: C.text, fontSize: 14, fontWeight: 600 }} />
+        </div>
+      </div>
+
       {/* Bank Accounts */}
       <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -2052,7 +2072,8 @@ function SparkCashflow() {
       const [loans, setLoans] = useState(loaded?.loans || DEFAULT_LOANS);
       const [ctSettings, setCtSettings] = useState(loaded?.ctSettings || DEFAULT_CT_SETTINGS);
       const [openingBalances, setOpeningBalances] = useState(() => migrateOpeningBalances(loaded));
-      const [showSplitView, setShowSplitView] = useState(false);
+      const [planStartMonth, setPlanStartMonth] = useState(loaded?.planStartMonth ?? new Date().getMonth());
+      const [planStartYear, setPlanStartYear] = useState(loaded?.planStartYear ?? new Date().getFullYear());
       const [saveStatus, setSaveStatus] = useState('idle');
 
       // Effective opening balance = sum of bank accounts
@@ -2072,17 +2093,17 @@ function SparkCashflow() {
         saveTimer.current = setTimeout(async () => {
           const ok = await API.saveData({
             openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe,
-            loans, ctSettings, openingBalances,
+            loans, ctSettings, openingBalances, planStartMonth, planStartYear,
             savedAt: new Date().toISOString()
           });
           setSaveStatus(ok ? 'saved' : 'error');
           if (ok) setTimeout(() => setSaveStatus('idle'), 2000);
         }, 2000);
         return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-      }, [openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe, loans, ctSettings, openingBalances]);
+      }, [openingBalance, shows, costGroups, projects, otherIncome, vatSettings, timeframe, loans, ctSettings, openingBalances, planStartMonth, planStartYear]);
 
       // Generate month range
-      const monthRange = useMemo(() => generateMonthRange(2026, 0, timeframe), [timeframe]);
+      const monthRange = useMemo(() => generateMonthRange(planStartYear, planStartMonth, timeframe), [planStartYear, planStartMonth, timeframe]);
 
       // Core calculation
       const data = useMemo(() => calculateCashflow({
@@ -2156,18 +2177,10 @@ function SparkCashflow() {
               <div>
                 <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.text }}>{pageTitle}</h1>
                 <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  {SCENARIOS[scenario].label} scenario · {timeframe} months from Jan 2026
+                  {SCENARIOS[scenario].label} scenario · {timeframe} months from {MONTHS[planStartMonth]} {planStartYear}
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {["pipeline","other_income","costs","projects","loans","scenarios"].includes(page) && (
-                  <button onClick={() => setShowSplitView(!showSplitView)}
-                    style={{ background: showSplitView ? C.accent : C.surface, color: showSplitView ? "#fff" : C.textMuted,
-                      border: `1px solid ${showSplitView ? C.accent : C.border}`, borderRadius: 8, padding: "8px 14px",
-                      cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                    📊 {showSplitView ? "Chart On" : "Chart Off"}
-                  </button>
-                )}
                 <div onClick={() => setPage("settings")} style={{ background: C.surface, borderRadius: 8, padding: "8px 14px",
                   border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
                   title="Click to edit in Settings">
@@ -2177,44 +2190,29 @@ function SparkCashflow() {
               </div>
             </div>
 
-            {/* Split View Wrapper for applicable pages */}
-            {(() => {
-              const splitPages = ["pipeline","other_income","costs","projects","loans","scenarios"];
-              const useSplit = showSplitView && splitPages.includes(page);
-              const content = (
-                <React.Fragment>
-                  {page === "dashboard" && <DashboardPage data={data} openingBalance={openingBalance} scenario={scenario} loans={loans} ctSettings={ctSettings} />}
-                  {page === "pipeline" && <PipelinePage shows={shows} setShows={setShows} />}
-                  {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} />}
-                  {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
-                  {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} />}
-                  {page === "loans" && <LoansPage loans={loans} setLoans={setLoans} monthRange={monthRange} />}
-                  {page === "vat" && <VATPage data={data} vatSettings={vatSettings} ctSettings={ctSettings} />}
-                  {page === "monthly" && <MonthlyDetailPage data={data} />}
-                  {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
-                    otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings}
-                    loans={loans} ctSettings={ctSettings} openingBalances={openingBalances} />}
-                  {page === "settings" && <SettingsPage openingBalances={openingBalances} setOpeningBalances={setOpeningBalances}
-                    ctSettings={ctSettings} setCtSettings={setCtSettings} vatSettings={vatSettings} />}
-                </React.Fragment>
-              );
-              if (!useSplit) return content;
-              return (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
-                  <div>{content}</div>
-                  <div style={{ position: "sticky", top: 20, alignSelf: "start" }}>
-                    <div style={{ background: C.surface, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>Cashflow Preview</div>
-                      <CashflowChart data={data} height={220} showLegend={false} />
-                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: C.textMuted }}>
-                        <span>End: {data.length > 0 ? fmt(data[data.length-1].balance) : "—"}</span>
-                        <span>Low: {data.length > 0 ? fmt(Math.min(...data.map(d=>d.balance))) : "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Always-on chart for data pages */}
+            {["pipeline","other_income","costs","projects"].includes(page) && (
+              <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Cashflow Overview</div>
+                <CashflowChart data={data} height={300} showLegend={true} />
+              </div>
+            )}
+
+            {page === "dashboard" && <DashboardPage data={data} openingBalance={openingBalance} scenario={scenario} loans={loans} ctSettings={ctSettings} />}
+            {page === "pipeline" && <PipelinePage shows={shows} setShows={setShows} />}
+            {page === "other_income" && <OtherIncomePage otherIncome={otherIncome} setOtherIncome={setOtherIncome} planStartMonth={planStartMonth} planStartYear={planStartYear} />}
+            {page === "costs" && <CostsPage costGroups={costGroups} setCostGroups={setCostGroups} />}
+            {page === "projects" && <ProjectsPage projects={projects} setProjects={setProjects} planStartMonth={planStartMonth} planStartYear={planStartYear} />}
+            {page === "loans" && <LoansPage loans={loans} setLoans={setLoans} monthRange={monthRange} />}
+            {page === "vat" && <VATPage data={data} vatSettings={vatSettings} ctSettings={ctSettings} />}
+            {page === "monthly" && <MonthlyDetailPage data={data} />}
+            {page === "scenarios" && <ScenariosPage shows={shows} costGroups={costGroups} projects={projects}
+              otherIncome={otherIncome} openingBalance={openingBalance} monthRange={monthRange} vatSettings={vatSettings}
+              loans={loans} ctSettings={ctSettings} openingBalances={openingBalances} />}
+            {page === "settings" && <SettingsPage openingBalances={openingBalances} setOpeningBalances={setOpeningBalances}
+              ctSettings={ctSettings} setCtSettings={setCtSettings} vatSettings={vatSettings}
+              planStartMonth={planStartMonth} setPlanStartMonth={setPlanStartMonth}
+              planStartYear={planStartYear} setPlanStartYear={setPlanStartYear} />}
           </div>
         </div>
       );
