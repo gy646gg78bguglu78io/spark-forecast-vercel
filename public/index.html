@@ -738,13 +738,16 @@ function AddButton({ label, onClick, style: extraStyle = {} }) {
 
 // ─── Modal System ────────────────────────────────────────
 function Modal({ open, onClose, title, children, width = 420 }) {
+  const backdropRef = useRef(null);
   if (!open) return null;
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999,
+    <div ref={backdropRef}
+      onMouseDown={e => { if (e.target === backdropRef.current) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 9999,
       background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
       display: "flex", alignItems: "center", justifyContent: "center",
       animation: "fadeIn 0.15s ease-out" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.surface, borderRadius: 12,
+      <div style={{ background: C.surface, borderRadius: 12,
         border: `1px solid ${C.border}`, width, maxWidth: "90vw",
         boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -986,6 +989,12 @@ function DashboardPage({ data, openingBalance, scenario, loans, ctSettings }) {
 
   return (
     <div>
+      {/* Main Cashflow Chart */}
+      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Cashflow Overview</div>
+        <CashflowChart data={data} height={300} showLegend={true} />
+      </div>
+
       {/* KPI Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <KPICard label="Cash In" value={fmtK(totalIncome)} icon="trendUp"
@@ -1007,12 +1016,6 @@ function DashboardPage({ data, openingBalance, scenario, loans, ctSettings }) {
           color={C.textMuted} subtitle={`${(loans || []).filter(l => l.enabled).length} active loan(s)`} />}
         {totalCTPayments > 0 && <KPICard label="Corporation Tax" value={fmtK(totalCTPayments)} icon="vat"
           color={C.red} subtitle={`${ctSettings?.rate || 19}% rate`} />}
-      </div>
-
-      {/* Main Cashflow Chart */}
-      <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Cashflow Overview</div>
-        <CashflowChart data={data} height={300} showLegend={true} />
       </div>
 
       {/* Two-column: Quarterly + Seasonal */}
@@ -1068,12 +1071,12 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const [newShow, setNewShow] = useState({ name: "", date: todayStr, fee: 3000, status: "hoped", days: 1 });
+  const [newShow, setNewShow] = useState({ name: "", date: todayStr, fee: 3950, status: "confirmed", days: 1 });
 
   const openAddModal = () => {
     const t = new Date();
     const ds = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-    setNewShow({ name: "", date: ds, fee: 3000, status: "hoped", days: 1 });
+    setNewShow({ name: "", date: ds, fee: 3950, status: "confirmed", days: 1 });
     setShowModal(true);
   };
 
