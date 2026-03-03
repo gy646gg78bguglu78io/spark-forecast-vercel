@@ -1753,6 +1753,35 @@ function SettingsPage({ openingBalances, setOpeningBalances, ctSettings, setCtSe
     });
   };
 
+  // Recompute opening CT rows when plan start date or FY end changes
+  useEffect(() => {
+    const fyEnd = ctSettings.fyEndMonth;
+    const lastFYEndYear = planStartMonth <= fyEnd ? planStartYear - 1 : planStartYear;
+
+    // Partial period: from month after last FY end to month before plan start
+    const pStartMonth = (fyEnd + 1) % 12;
+    const pStartYear = fyEnd === 11 ? lastFYEndYear + 1 : lastFYEndYear;
+    const pEndMonth = (planStartMonth - 1 + 12) % 12;
+    const pEndYear = planStartMonth === 0 ? planStartYear - 1 : planStartYear;
+    const hasPartial = !(pStartMonth === planStartMonth && pStartYear === planStartYear);
+
+    const newCT = [
+      { id: "ct_1", label: `CT from FY ending ${MONTH_NAMES[fyEnd]} ${lastFYEndYear}`,
+        amount: openingBalances.openingCT.find(c => c.id === "ct_1")?.amount || 0, fyEndMonth: fyEnd }
+    ];
+    if (hasPartial) {
+      newCT.push({ id: "ct_2", label: `CT from partial year ${MONTH_NAMES[pStartMonth]}-${MONTH_NAMES[pEndMonth]} ${pEndYear}`,
+        amount: openingBalances.openingCT.find(c => c.id === "ct_2")?.amount || 0, fyEndMonth: pEndMonth });
+    }
+
+    // Only update if structure changed (avoid infinite loop)
+    const oldStructure = JSON.stringify(openingBalances.openingCT.map(({ amount, ...rest }) => rest));
+    const newStructure = JSON.stringify(newCT.map(({ amount, ...rest }) => rest));
+    if (oldStructure !== newStructure) {
+      setOpeningBalances(prev => ({ ...prev, openingCT: newCT }));
+    }
+  }, [planStartMonth, planStartYear, ctSettings.fyEndMonth]);
+
   return (
     <div>
       {/* Plan Start Date */}
