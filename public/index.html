@@ -1922,8 +1922,38 @@ function LoansPage({ loans, setLoans, monthRange, confirmDelete }) {
   const totalInterest = schedules.reduce((s, sch) => s + sch.reduce((si, m) => si + m.interest, 0), 0);
   const totalCapital = schedules.reduce((s, sch) => s + sch.reduce((si, m) => si + m.capital, 0), 0);
 
+  // Build chart data: combined balance + interest/capital split per month
+  const loanChartData = monthRange.map((mr, i) => {
+    let balance = 0, interest = 0, capital = 0;
+    schedules.forEach(sch => {
+      if (sch[i]) { balance += sch[i].balance; interest += sch[i].interest; capital += sch[i].capital; }
+    });
+    return { label: mr.label, balance: Math.round(balance), interest: Math.round(interest), capital: Math.round(capital) };
+  });
+
   return (
     <div>
+      {/* Loan Balance Chart */}
+      {enabledLoans.length > 0 && (
+        <div style={{ background: C.surface, borderRadius: 10, padding: 20, marginBottom: 16, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 12 }}>Total Loan Balance Over Time</div>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={loanChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="label" tick={{ fill: C.textMuted, fontSize: 11 }} />
+              <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} tickFormatter={fmtK} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="capital" name="Capital Repaid" stackId="pmt" fill={C.green} opacity={0.7} radius={[0, 0, 0, 0]} />
+              <Bar dataKey="interest" name="Interest" stackId="pmt" fill={C.orange} opacity={0.7} radius={[2, 2, 0, 0]} />
+              <Line dataKey="balance" name="Outstanding Balance" type="monotone"
+                stroke={C.blue} strokeWidth={3} dot={false} />
+              <ReferenceLine y={0} stroke={C.textDim} strokeDasharray="3 3" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <KPICard label="Total Outstanding" value={fmtK(totalOutstanding)} icon="bank" color={C.blue}
