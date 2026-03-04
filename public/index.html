@@ -258,7 +258,7 @@ const DEFAULT_COST_GROUPS = [
     ]
   },
   {
-    id: "dividends", name: "Dividends", icon: "💰", enabled: true,
+    id: "dividends", name: "Dividends", icon: "💰", enabled: true, taxDeductible: false,
     items: [
       { id: "dividends_full", name: "Directors Dividends", amount: 5500, enabled: true },
     ]
@@ -384,6 +384,20 @@ function migrateShowFields(shows) {
     if (!migrated.costs) migrated.costs = { performers: 0, hotels: 0, perDiems: 0, travel: 0, other: 0 };
     if (migrated.received === undefined) migrated.received = 0;
     delete migrated.days;
+    return migrated;
+  });
+}
+
+function migrateCostGroups(groups) {
+  return groups.map(g => {
+    const migrated = { ...g };
+    // Dividends should not reduce taxable profit
+    if (g.id === "dividends" && g.taxDeductible === undefined) migrated.taxDeductible = false;
+    // Add frequency support to items
+    migrated.items = (g.items || []).map(i => ({
+      ...i,
+      frequency: i.frequency || "monthly",
+    }));
     return migrated;
   });
 }
@@ -531,10 +545,22 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
 
     const income = (rawShowIncome + otherIncomeTotal) * sc.incMult;
 
-    // ── Costs ──
-    const rawFixed = costGroups.filter(g => g.enabled).reduce((s, g) =>
-      s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
-    const fixedCosts = rawFixed * sc.costMult;
+    // ── Costs (split deductible vs non-deductible, support annual frequency) ──
+    let rawDeductibleFixed = 0, rawNonDeductibleFixed = 0;
+    costGroups.filter(g => g.enabled).forEach(g => {
+      const isDeductible = g.taxDeductible !== false;
+      const groupTotal = g.items.filter(i => i.enabled).reduce((sum, item) => {
+        if ((item.frequency || "monthly") === "annual") {
+          return sum + (mi === (item.annualMonth ?? 0) ? item.amount : 0);
+        }
+        return sum + item.amount;
+      }, 0);
+      if (isDeductible) rawDeductibleFixed += groupTotal;
+      else rawNonDeductibleFixed += groupTotal;
+    });
+    const deductibleFixed = rawDeductibleFixed * sc.costMult;
+    const nonDeductibleFixed = rawNonDeductibleFixed * sc.costMult;
+    const fixedCosts = deductibleFixed + nonDeductibleFixed;
 
     let projectCosts = 0;
     projects.filter(p => p.enabled).forEach(p => {
@@ -555,7 +581,7 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
 
     // ── VAT ──
     const vatCollected = income * vatSettings.rate;
-    const vatOnPurchases = (fixedCosts + projectCosts + showCosts) * vatSettings.reclaimRate;
+    const vatOnPurchases = (deductibleFixed + projectCosts + showCosts) * vatSettings.reclaimRate;
     vatAccumulator += vatCollected - vatOnPurchases;
     let vatPayment = 0;
     if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPending = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
@@ -564,8 +590,8 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
     // ── Corporation Tax ──
     let ctPayment = 0;
     if (hasCT) {
-      // Taxable profit: income - costs - loan interest (NOT capital, NOT VAT, NOT loan cash in)
-      fyTaxableProfit += income - fixedCosts - projectCosts - showCosts - loanInterest;
+      // Taxable profit: income - deductible costs - loan interest (NOT capital, NOT VAT, NOT dividends)
+      fyTaxableProfit += income - deductibleFixed - projectCosts - showCosts - loanInterest;
 
       // At FY end, calculate CT for completed year
       if (mi === ctSettings.fyEndMonth) {
@@ -635,12 +661,13 @@ function Toggle({ on, onChange, size = "sm" }) {
   );
 }
 
-function EditableCell({ value, onChange, prefix = "£", style = {} }) {
+function EditableCell({ value, onChange, prefix = "£", style = {}, autoEdit = false }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
   const inputRef = useRef(null);
 
   useEffect(() => { if (editing && inputRef.current) inputRef.current.select(); }, [editing]);
+  useEffect(() => { if (autoEdit && !editing) { setDraft(String(value)); setEditing(true); } }, [autoEdit]);
 
   if (editing) {
     return (
@@ -749,19 +776,24 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // Inline editable text (no prompt() needed)
-function EditableText({ value, onChange, style = {} }) {
+function EditableText({ value, onChange, style = {}, autoEdit = false, onTab }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef(null);
 
   useEffect(() => { if (editing && inputRef.current) inputRef.current.select(); }, [editing]);
+  useEffect(() => { if (autoEdit && !editing) { setDraft(value); setEditing(true); } }, [autoEdit]);
 
   if (editing) {
     return (
       <input ref={inputRef} value={draft} autoFocus
         onChange={e => setDraft(e.target.value)}
         onBlur={() => { if (draft.trim()) onChange(draft.trim()); setEditing(false); }}
-        onKeyDown={e => { if (e.key === "Enter") { if (draft.trim()) onChange(draft.trim()); setEditing(false); } if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+        onKeyDown={e => {
+          if (e.key === "Enter") { if (draft.trim()) onChange(draft.trim()); setEditing(false); }
+          if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          if (e.key === "Tab" && onTab) { e.preventDefault(); if (draft.trim()) onChange(draft.trim()); setEditing(false); onTab(); }
+        }}
         style={{ background: C.bg, border: `1px solid ${C.accent}`, color: C.text, borderRadius: 4,
           padding: "2px 6px", fontSize: 13, outline: "none", minWidth: 80, ...style }} />
     );
@@ -816,14 +848,14 @@ function Modal({ open, onClose, title, children, width = 420 }) {
       display: "flex", alignItems: "center", justifyContent: "center",
       animation: "fadeIn 0.15s ease-out" }}>
       <div style={{ background: C.surface, borderRadius: 12,
-        border: `1px solid ${C.border}`, width, maxWidth: "90vw",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+        border: `1px solid ${C.border}`, width, maxWidth: "90vw", maxHeight: "90vh",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "16px 20px", borderBottom: `1px solid ${C.border}` }}>
+          padding: "16px 20px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{title}</span>
           <IconBtn icon="close" onClick={onClose} color={C.textDim} hoverColor={C.text} />
         </div>
-        <div style={{ padding: "20px" }}>{children}</div>
+        <div style={{ padding: "20px", overflow: "auto", flex: 1 }}>{children}</div>
       </div>
     </div>
   );
@@ -945,7 +977,7 @@ const NAV_ITEMS = [
   { id: "dashboard", icon: "dashboard", label: "Dashboard" },
   { id: "pipeline", icon: "pipeline", label: "Show Pipeline" },
   { id: "other_income", icon: "income", label: "Other Income" },
-  { id: "costs", icon: "costs", label: "Monthly Costs" },
+  { id: "costs", icon: "costs", label: "Regular Costs" },
   { id: "projects", icon: "projects", label: "Projects" },
   { id: "loans", icon: "loans", label: "Loans" },
   { id: "vat", icon: "vat", label: "VAT & Tax" },
@@ -1384,10 +1416,20 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
   );
 }
 
-// ─── MONTHLY COSTS ───────────────────────────────────────
+// ─── REGULAR COSTS ───────────────────────────────────────
 function CostsPage({ costGroups, setCostGroups, confirmDelete }) {
-  const totalMonthly = costGroups.filter(g => g.enabled).reduce((s, g) =>
-    s + g.items.filter(i => i.enabled).reduce((si, i) => si + i.amount, 0), 0);
+  const [autoEditId, setAutoEditId] = useState(null);
+  const [pieOpen, setPieOpen] = useState(false);
+
+  // KPI totals: separate monthly vs annual
+  const monthlyTotal = costGroups.filter(g => g.enabled).reduce((s, g) =>
+    s + g.items.filter(i => i.enabled && (i.frequency || "monthly") === "monthly").reduce((si, i) => si + i.amount, 0), 0);
+  const annualItemsTotal = costGroups.filter(g => g.enabled).reduce((s, g) =>
+    s + g.items.filter(i => i.enabled && i.frequency === "annual").reduce((si, i) => si + i.amount, 0), 0);
+  const annualEstimate = monthlyTotal * 12 + annualItemsTotal;
+
+  // Clear autoEditId after it's consumed
+  useEffect(() => { if (autoEditId) { const t = setTimeout(() => setAutoEditId(null), 100); return () => clearTimeout(t); } }, [autoEditId]);
 
   const toggleGroup = (gid) => setCostGroups(costGroups.map(g => g.id === gid ? { ...g, enabled: !g.enabled } : g));
   const toggleItem = (gid, iid) => setCostGroups(costGroups.map(g => g.id === gid ? {
@@ -1396,9 +1438,16 @@ function CostsPage({ costGroups, setCostGroups, confirmDelete }) {
   const updateAmount = (gid, iid, val) => setCostGroups(costGroups.map(g => g.id === gid ? {
     ...g, items: g.items.map(i => i.id === iid ? { ...i, amount: val } : i)
   } : g));
-  const addItem = (gid) => setCostGroups(costGroups.map(g => g.id === gid ? {
-    ...g, items: [...g.items, { id: `item_${Date.now()}`, name: "New Item", amount: 0, enabled: true }]
+  const updateItemField = (gid, iid, field, val) => setCostGroups(costGroups.map(g => g.id === gid ? {
+    ...g, items: g.items.map(i => i.id === iid ? { ...i, [field]: val } : i)
   } : g));
+  const addItem = (gid) => {
+    const newId = `item_${Date.now()}`;
+    setCostGroups(costGroups.map(g => g.id === gid ? {
+      ...g, items: [...g.items, { id: newId, name: "New Item", amount: 0, enabled: true, frequency: "monthly" }]
+    } : g));
+    setAutoEditId(newId);
+  };
   const doRemoveItem = (gid, iid) => setCostGroups(costGroups.map(g => g.id === gid ? {
     ...g, items: g.items.filter(i => i.id !== iid)
   } : g));
@@ -1416,21 +1465,25 @@ function CostsPage({ costGroups, setCostGroups, confirmDelete }) {
     id: `grp_${Date.now()}`, name: "New Group", icon: "folder", enabled: true, items: []
   }]);
 
-  const pieData = costGroups.filter(g => g.enabled).map(g => ({
-    name: g.name, value: g.items.filter(i => i.enabled).reduce((s, i) => s + i.amount, 0), icon: g.icon,
-  })).filter(d => d.value > 0);
+  // Pie data: annual spend per group (monthly×12 + annual items)
+  const pieData = costGroups.filter(g => g.enabled).map(g => {
+    const mo = g.items.filter(i => i.enabled && (i.frequency || "monthly") === "monthly").reduce((s, i) => s + i.amount, 0);
+    const yr = g.items.filter(i => i.enabled && i.frequency === "annual").reduce((s, i) => s + i.amount, 0);
+    return { name: g.name, value: mo * 12 + yr, icon: g.icon };
+  }).filter(d => d.value > 0);
   const PIE_COLORS = [C.blue, C.green, C.accent, C.purple, C.orange, C.cyan, C.pink];
 
   return (
     <div>
       {/* Summary */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <KPICard label="Total Monthly" value={fmt(totalMonthly)} color={C.red} icon="chart"
+        <KPICard label="Total Monthly" value={fmt(monthlyTotal)} color={C.red} icon="chart"
           subtitle={`${costGroups.filter(g => g.enabled).length}/${costGroups.length} groups active`} />
-        <KPICard label="Annual Estimate" value={fmtK(totalMonthly * 12)} color={C.orange} icon="calendar"
-          subtitle="Based on current monthly" />
-        <div style={{ background: C.surface, borderRadius: 10, padding: "12px 16px", flex: 1.5, minWidth: 200,
-          border: `1px solid ${C.border}`, display: "flex", alignItems: "center" }}>
+        <KPICard label="Annual Estimate" value={fmtK(annualEstimate)} color={C.orange} icon="calendar"
+          subtitle={annualItemsTotal > 0 ? `Monthly×12 + ${fmt(annualItemsTotal)} annual` : "Based on current monthly"} />
+        <div onClick={() => setPieOpen(true)} style={{ background: C.surface, borderRadius: 10, padding: "12px 16px", flex: 1.5, minWidth: 200,
+          border: `1px solid ${C.border}`, display: "flex", alignItems: "center", cursor: "pointer" }}
+          title="Click to expand">
           <ResponsiveContainer width="100%" height={100}>
             <PieChart>
               <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
@@ -1451,9 +1504,28 @@ function CostsPage({ costGroups, setCostGroups, confirmDelete }) {
         </div>
       </div>
 
+      {/* Pie Chart Modal */}
+      <Modal open={pieOpen} onClose={() => setPieOpen(false)} title="Annual Cost Breakdown" width="80vw">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "65vh" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                innerRadius="25%" outerRadius="42%" paddingAngle={2}
+                label={({ name, value, percent }) => `${name}: ${fmt(value)} (${(percent * 100).toFixed(0)}%)`}
+                labelLine={{ stroke: C.textMuted }}>
+                {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+              </Pie>
+              <Tooltip content={<ChartTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 13, color: C.text }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </Modal>
+
       {/* Cost Groups */}
       {costGroups.map(group => {
-        const groupTotal = group.items.filter(i => i.enabled).reduce((s, i) => s + i.amount, 0);
+        const moTotal = group.items.filter(i => i.enabled && (i.frequency || "monthly") === "monthly").reduce((s, i) => s + i.amount, 0);
+        const yrTotal = group.items.filter(i => i.enabled && i.frequency === "annual").reduce((s, i) => s + i.amount, 0);
         return (
           <div key={group.id} style={{ background: C.surface, borderRadius: 10, marginBottom: 12,
             border: `1px solid ${group.enabled ? C.border : C.border + "44"}`, opacity: group.enabled ? 1 : 0.5,
@@ -1469,31 +1541,55 @@ function CostsPage({ costGroups, setCostGroups, confirmDelete }) {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: group.enabled ? C.accent : C.textDim }}>
-                  {fmt(groupTotal)}<span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>/mo</span>
+                  {moTotal > 0 && <>{fmt(moTotal)}<span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>/mo</span></>}
+                  {moTotal > 0 && yrTotal > 0 && <span style={{ fontSize: 11, color: C.textMuted }}> + </span>}
+                  {yrTotal > 0 && <>{fmt(yrTotal)}<span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>/yr</span></>}
+                  {moTotal === 0 && yrTotal === 0 && <span style={{ color: C.textDim }}>£0</span>}
                 </span>
                 <IconBtn icon="🗑️" onClick={() => removeGroup(group.id)} title="Delete group" hoverColor={C.red} />
               </div>
             </div>
             {group.enabled && (
               <div style={{ padding: "4px 16px 12px" }}>
-                {group.items.map(item => (
+                {group.items.map(item => {
+                  const isAnnual = item.frequency === "annual";
+                  return (
                   <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "6px 0", borderBottom: `1px solid ${C.border}11` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
                       <Toggle on={item.enabled} onChange={() => toggleItem(group.id, item.id)} size="sm" />
                       <EditableText value={item.name} onChange={v => updateItemName(group.id, item.id, v)}
+                        autoEdit={autoEditId === item.id}
+                        onTab={() => setAutoEditId(item.id + "_amount")}
                         style={{ fontSize: 13, color: item.enabled ? C.text : C.textDim }} />
                       {item.note && <span style={{ fontSize: 10, color: C.textDim, fontStyle: "italic" }}>({item.note})</span>}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <select value={item.frequency || "monthly"}
+                        onChange={e => updateItemField(group.id, item.id, "frequency", e.target.value)}
+                        style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 4,
+                          fontSize: 10, padding: "2px 4px", cursor: "pointer", outline: "none" }}>
+                        <option value="monthly">Monthly</option>
+                        <option value="annual">Annual</option>
+                      </select>
+                      {isAnnual && (
+                        <select value={item.annualMonth ?? 0}
+                          onChange={e => updateItemField(group.id, item.id, "annualMonth", parseInt(e.target.value))}
+                          style={{ background: C.bg, color: C.textMuted, border: `1px solid ${C.border}`, borderRadius: 4,
+                            fontSize: 10, padding: "2px 4px", cursor: "pointer", outline: "none" }}>
+                          {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m}</option>)}
+                        </select>
+                      )}
                       <span style={{ fontSize: 13, fontWeight: 600, color: item.enabled ? C.text : C.textDim }}>
-                        <EditableCell value={item.amount} onChange={v => updateAmount(group.id, item.id, v)} />
-                        <span style={{ fontSize: 10, color: C.textMuted }}>/mo</span>
+                        <EditableCell value={item.amount} onChange={v => updateAmount(group.id, item.id, v)}
+                          autoEdit={autoEditId === item.id + "_amount"} />
+                        <span style={{ fontSize: 10, color: C.textMuted }}>{isAnnual ? "/yr" : "/mo"}</span>
                       </span>
                       <IconBtn icon="✕" onClick={() => removeItem(group.id, item.id)} />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 <AddButton label="+ Add Item" onClick={() => addItem(group.id)} style={{ marginTop: 6, fontSize: 11, padding: "4px 12px" }} />
               </div>
             )}
@@ -2573,7 +2669,7 @@ function SparkCashflow() {
       const [scenario, setScenario] = useState("expected");
       const [timeframe, setTimeframe] = useState(loaded?.timeframe || 12);
       const [shows, setShows] = useState(migrateShowFields(migrateShowDates(loaded?.shows || DEFAULT_SHOWS)));
-      const [costGroups, setCostGroups] = useState(loaded?.costGroups || DEFAULT_COST_GROUPS);
+      const [costGroups, setCostGroups] = useState(migrateCostGroups(loaded?.costGroups || DEFAULT_COST_GROUPS));
       const [projects, setProjects] = useState(loaded?.projects || DEFAULT_PROJECTS);
       const [otherIncome, setOtherIncome] = useState(loaded?.otherIncome || DEFAULT_OTHER_INCOME);
       const [vatSettings] = useState({ rate: 0.20, reclaimRate: 0.20, paymentDelay: 1 });
