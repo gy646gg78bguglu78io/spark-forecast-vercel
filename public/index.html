@@ -2320,7 +2320,9 @@ function SparkCashflow() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
-        return r.ok;
+        if (r.ok) return { ok: true };
+        if (r.status >= 500) return { ok: false, serverError: true };
+        return { ok: false };
       },
       async loadData() {
         try {
@@ -2357,9 +2359,9 @@ function SparkCashflow() {
         e.preventDefault();
         setLoading(true);
         setError('');
-        const ok = await API.login(username, password);
-        if (ok) { onLogin(); }
-        else { setError('Wrong username or password'); setLoading(false); }
+        const result = await API.login(username, password);
+        if (result.ok) { onLogin(); }
+        else { setError(result.serverError ? 'Server error — please try again' : 'Wrong username or password'); setLoading(false); }
       };
 
       return (

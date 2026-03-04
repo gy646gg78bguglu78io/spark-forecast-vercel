@@ -61,9 +61,14 @@ module.exports = async function handler(req, res) {
     }
 
     if (users[user] && safeCompare(users[user], password)) {
-      const token = createToken(user);
-      res.setHeader('Set-Cookie', setTokenCookie(token));
-      return res.json({ success: true, user });
+      try {
+        const token = createToken(user);
+        res.setHeader('Set-Cookie', setTokenCookie(token));
+        return res.json({ success: true, user });
+      } catch (err) {
+        console.error('Token creation failed:', err.message);
+        return res.status(500).json({ error: 'Server error' });
+      }
     }
 
     return res.status(401).json({ error: 'Wrong username or password' });
