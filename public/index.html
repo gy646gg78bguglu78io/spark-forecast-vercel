@@ -176,30 +176,31 @@ function GroupIcon({ icon, size = 18, color = C.textMuted }) {
 const DEFAULT_OPENING_BALANCE = 112250;
 const VAT_RATE = 0.20;
 
+const DEFAULT_SHOW_COSTS = { performers: 0, hotels: 0, perDiems: 0, travel: 0, other: 0 };
 const DEFAULT_SHOWS = [
-  { id: 1, name: "NYE Dubai", date: "2026-01-03", month: "Jan", year: 2026, fee: 8500, status: "confirmed", days: 3 },
-  { id: 2, name: "Winter Lights Festival", date: "2026-01-17", month: "Jan", year: 2026, fee: 4200, status: "confirmed", days: 2 },
-  { id: 3, name: "Burns Night Glasgow", date: "2026-01-25", month: "Jan", year: 2026, fee: 3800, status: "confirmed", days: 1 },
-  { id: 4, name: "Lumiere Durham", date: "2026-02-12", month: "Feb", year: 2026, fee: 6500, status: "confirmed", days: 3 },
-  { id: 5, name: "Chinese New Year Liverpool", date: "2026-02-17", month: "Feb", year: 2026, fee: 4800, status: "confirmed", days: 2 },
-  { id: 6, name: "St David's Day Cardiff", date: "2026-03-01", month: "Mar", year: 2026, fee: 3500, status: "confirmed", days: 1 },
-  { id: 7, name: "Corporate - Deloitte", date: "2026-03-20", month: "Mar", year: 2026, fee: 7200, status: "confirmed", days: 1 },
-  { id: 8, name: "Easter Event Manchester", date: "2026-04-05", month: "Apr", year: 2026, fee: 3200, status: "likely", days: 1 },
-  { id: 9, name: "Council Lights Birmingham", date: "2026-05-15", month: "May", year: 2026, fee: 4500, status: "likely", days: 2 },
-  { id: 10, name: "Corporate - HSBC", date: "2026-06-12", month: "Jun", year: 2026, fee: 5500, status: "hoped", days: 1 },
-  { id: 11, name: "Festival Gig", date: "2026-07-18", month: "Jul", year: 2026, fee: 2800, status: "hoped", days: 2 },
-  { id: 12, name: "Edinburgh Fringe", date: "2026-08-08", month: "Aug", year: 2026, fee: 4000, status: "hoped", days: 3 },
-  { id: 13, name: "Blackpool Illuminations", date: "2026-09-04", month: "Sep", year: 2026, fee: 5200, status: "likely", days: 2 },
-  { id: 14, name: "Halloween Spectacular", date: "2026-10-28", month: "Oct", year: 2026, fee: 12000, status: "likely", days: 4 },
-  { id: 15, name: "Diwali Leicester", date: "2026-10-14", month: "Oct", year: 2026, fee: 5500, status: "likely", days: 2 },
-  { id: 16, name: "Bonfire Night Leeds", date: "2026-11-05", month: "Nov", year: 2026, fee: 6800, status: "likely", days: 2 },
-  { id: 17, name: "Xmas Lights - Newcastle", date: "2026-11-14", month: "Nov", year: 2026, fee: 8500, status: "likely", days: 3 },
-  { id: 18, name: "Xmas Lights - Manchester", date: "2026-11-21", month: "Nov", year: 2026, fee: 9200, status: "confirmed", days: 3 },
-  { id: 19, name: "Xmas Parade Liverpool", date: "2026-12-05", month: "Dec", year: 2026, fee: 7500, status: "confirmed", days: 2 },
-  { id: 20, name: "NYE London", date: "2026-12-31", month: "Dec", year: 2026, fee: 15000, status: "hoped", days: 2 },
-  { id: 21, name: "Corporate Christmas x3", date: "2026-12-12", month: "Dec", year: 2026, fee: 18000, status: "likely", days: 3 },
-  { id: 22, name: "Shopping Centre Xmas", date: "2026-12-18", month: "Dec", year: 2026, fee: 6000, status: "likely", days: 4 },
-  { id: 23, name: "Hogmanay Edinburgh", date: "2026-12-31", month: "Dec", year: 2026, fee: 8000, status: "hoped", days: 2 },
+  { id: 1, name: "NYE Dubai", date: "2026-01-03", month: "Jan", year: 2026, fee: 8500, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 2, name: "Winter Lights Festival", date: "2026-01-17", month: "Jan", year: 2026, fee: 4200, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 3, name: "Burns Night Glasgow", date: "2026-01-25", month: "Jan", year: 2026, fee: 3800, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 4, name: "Lumiere Durham", date: "2026-02-12", month: "Feb", year: 2026, fee: 6500, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 5, name: "Chinese New Year Liverpool", date: "2026-02-17", month: "Feb", year: 2026, fee: 4800, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 6, name: "St David's Day Cardiff", date: "2026-03-01", month: "Mar", year: 2026, fee: 3500, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 7, name: "Corporate - Deloitte", date: "2026-03-20", month: "Mar", year: 2026, fee: 7200, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 8, name: "Easter Event Manchester", date: "2026-04-05", month: "Apr", year: 2026, fee: 3200, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 9, name: "Council Lights Birmingham", date: "2026-05-15", month: "May", year: 2026, fee: 4500, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 10, name: "Corporate - HSBC", date: "2026-06-12", month: "Jun", year: 2026, fee: 5500, status: "hoped", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 11, name: "Festival Gig", date: "2026-07-18", month: "Jul", year: 2026, fee: 2800, status: "hoped", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 12, name: "Edinburgh Fringe", date: "2026-08-08", month: "Aug", year: 2026, fee: 4000, status: "hoped", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 13, name: "Blackpool Illuminations", date: "2026-09-04", month: "Sep", year: 2026, fee: 5200, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 14, name: "Halloween Spectacular", date: "2026-10-28", month: "Oct", year: 2026, fee: 12000, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 15, name: "Diwali Leicester", date: "2026-10-14", month: "Oct", year: 2026, fee: 5500, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 16, name: "Bonfire Night Leeds", date: "2026-11-05", month: "Nov", year: 2026, fee: 6800, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 17, name: "Xmas Lights - Newcastle", date: "2026-11-14", month: "Nov", year: 2026, fee: 8500, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 18, name: "Xmas Lights - Manchester", date: "2026-11-21", month: "Nov", year: 2026, fee: 9200, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 19, name: "Xmas Parade Liverpool", date: "2026-12-05", month: "Dec", year: 2026, fee: 7500, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 20, name: "NYE London", date: "2026-12-31", month: "Dec", year: 2026, fee: 15000, status: "hoped", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 21, name: "Corporate Christmas x3", date: "2026-12-12", month: "Dec", year: 2026, fee: 18000, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 22, name: "Shopping Centre Xmas", date: "2026-12-18", month: "Dec", year: 2026, fee: 6000, status: "likely", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
+  { id: 23, name: "Hogmanay Edinburgh", date: "2026-12-31", month: "Dec", year: 2026, fee: 8000, status: "hoped", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 },
 ];
 
 const DEFAULT_COST_GROUPS = [
@@ -377,6 +378,16 @@ function migrateShowDates(shows) {
   });
 }
 
+function migrateShowFields(shows) {
+  return shows.map(s => {
+    const migrated = { ...s };
+    if (!migrated.costs) migrated.costs = { performers: 0, hotels: 0, perDiems: 0, travel: 0, other: 0 };
+    if (migrated.received === undefined) migrated.received = 0;
+    delete migrated.days;
+    return migrated;
+  });
+}
+
 // UK VAT quarter helpers
 const VAT_QUARTER_END_MONTHS = [2, 5, 8, 11]; // Mar, Jun, Sep, Dec
 const VAT_PAYMENT_MONTHS = [4, 7, 10, 1]; // May, Aug, Nov, Feb (1mo+7d after quarter end)
@@ -460,12 +471,51 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
   // Opening VAT
   let openingVatRemaining = openingBalances?.openingVatOwed || 0;
 
+  // ── Pre-compute deferred show income (income arrives 1 month after show date) ──
+  const deferredShowIncome = new Array(monthRange.length).fill(0);
+  const prePlanShowCostsTotal = [0]; // index 0 = plan start month accumulator
+  const planStartKey = monthRange.length > 0 ? monthRange[0].key : "";
+
+  shows.forEach(sh => {
+    const prob = STATUS_CONFIG[sh.status]?.prob || 0;
+    const netIncome = (sh.fee - (sh.received || 0)) * prob;
+    const c = sh.costs || {};
+    const showCost = ((c.performers || 0) + (c.hotels || 0) + (c.perDiems || 0) + (c.travel || 0) + (c.other || 0)) * prob;
+    const showKey = monthKey(sh.month, sh.year);
+
+    if (showKey < planStartKey) {
+      // Pre-plan show: income goes into month after plan start (index 1)
+      if (monthRange.length > 1) deferredShowIncome[1] += netIncome;
+      else if (monthRange.length === 1) deferredShowIncome[0] += netIncome;
+      // Pre-plan show costs go into first month (plan start)
+      prePlanShowCostsTotal[0] += showCost;
+    } else {
+      const showMonthIdx = monthRange.findIndex(mr => mr.month === sh.month && mr.year === sh.year);
+      if (showMonthIdx >= 0) {
+        // Income goes into NEXT month (1-month payment delay)
+        const targetIdx = showMonthIdx + 1;
+        if (targetIdx < monthRange.length) {
+          deferredShowIncome[targetIdx] += netIncome;
+        }
+        // If show is in last month of range, income would be beyond range — not shown
+      }
+    }
+  });
+
   return monthRange.map((mr, idx) => {
     const mi = monthIndex(mr.month);
 
-    // ── Income ──
+    // ── Show costs for this month ──
     const monthShows = shows.filter(s => s.month === mr.month && s.year === mr.year);
-    const rawShowIncome = monthShows.reduce((s, sh) => s + sh.fee * STATUS_CONFIG[sh.status].prob, 0);
+    let showCosts = monthShows.reduce((s, sh) => {
+      const c = sh.costs || {};
+      return s + ((c.performers || 0) + (c.hotels || 0) + (c.perDiems || 0) + (c.travel || 0) + (c.other || 0)) * (STATUS_CONFIG[sh.status]?.prob || 0);
+    }, 0);
+    // Add pre-plan show costs to first month
+    if (idx === 0) showCosts += prePlanShowCostsTotal[0];
+
+    // ── Income (deferred show income + other income) ──
+    const rawShowIncome = deferredShowIncome[idx] || 0;
     let otherIncomeTotal = 0;
     otherIncome.filter(oi => oi.enabled).forEach(oi => {
       if (oi.type === "one-off" && oi.month === mr.month && oi.year === mr.year) otherIncomeTotal += oi.amount;
@@ -505,7 +555,7 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
 
     // ── VAT ──
     const vatCollected = income * vatSettings.rate;
-    const vatOnPurchases = (fixedCosts + projectCosts) * vatSettings.reclaimRate;
+    const vatOnPurchases = (fixedCosts + projectCosts + showCosts) * vatSettings.reclaimRate;
     vatAccumulator += vatCollected - vatOnPurchases;
     let vatPayment = 0;
     if (VAT_QUARTER_END_MONTHS.includes(mi)) { vatPending = Math.max(vatAccumulator, 0); vatAccumulator = 0; }
@@ -515,7 +565,7 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
     let ctPayment = 0;
     if (hasCT) {
       // Taxable profit: income - costs - loan interest (NOT capital, NOT VAT, NOT loan cash in)
-      fyTaxableProfit += income - fixedCosts - projectCosts - loanInterest;
+      fyTaxableProfit += income - fixedCosts - projectCosts - showCosts - loanInterest;
 
       // At FY end, calculate CT for completed year
       if (mi === ctSettings.fyEndMonth) {
@@ -538,11 +588,11 @@ function calculateCashflow({ shows, costGroups, projects, otherIncome, openingBa
     }
 
     // ── Totals ──
-    const totalCosts = fixedCosts + projectCosts + vatPayment + loanPayment + ctPayment;
+    const totalCosts = fixedCosts + projectCosts + showCosts + vatPayment + loanPayment + ctPayment;
     balance += income + loanCashIn - totalCosts;
 
     return {
-      ...mr, monthIdx: mi, income, fixedCosts, projectCosts,
+      ...mr, monthIdx: mi, income, fixedCosts, projectCosts, showCosts,
       vatPayment, loanPayment, loanInterest, loanCapital, loanCashIn, ctPayment,
       totalCosts, balance,
       showCount: monthShows.length, otherIncome: otherIncomeTotal,
@@ -662,20 +712,38 @@ const SEASONAL = {
   11: { tag: "Q4", note: "Peak" },
 };
 
+// Tooltip row helper
+function TtRow({ color, label, value, bold }) {
+  if (!value || Math.abs(value) < 0.5) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 2 }}>
+      <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+      <span style={{ color: C.textMuted, flex: 1 }}>{label}</span>
+      <span style={{ color: C.text, fontWeight: bold ? 700 : 600, whiteSpace: "nowrap" }}>{fmt(value)}</span>
+    </div>
+  );
+}
+
 // Custom tooltip for charts
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+      boxShadow: "0 8px 24px rgba(0,0,0,0.4)", minWidth: 180 }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 6 }}>{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 2 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: p.color }} />
-          <span style={{ color: C.textMuted }}>{p.name}:</span>
-          <span style={{ color: C.text, fontWeight: 600 }}>{fmt(p.value)}</span>
-        </div>
-      ))}
+      <TtRow color={C.green} label="Income" value={d.income} />
+      {d.showCosts > 0 && <TtRow color={C.orange || "#f59e0b"} label="Show Costs" value={-d.showCosts} />}
+      {d.projectCosts > 0 && <TtRow color={C.purple || "#a855f7"} label="Project Costs" value={-d.projectCosts} />}
+      <TtRow color={C.red} label="Ongoing Costs" value={-d.fixedCosts} />
+      {d.vatPayment > 0 && <TtRow color={C.accent} label="VAT" value={-d.vatPayment} />}
+      {d.ctPayment > 0 && <TtRow color={C.textMuted} label="Corporation Tax" value={-d.ctPayment} />}
+      {d.loanPayment > 0 && <TtRow color={C.blue} label="Loan Repayment" value={-d.loanPayment} />}
+      <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4 }}>
+        <TtRow color={C.blue} label="Balance" value={d.balance} bold />
+      </div>
     </div>
   );
 }
@@ -1065,19 +1133,22 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const [newShow, setNewShow] = useState({ name: "", date: todayStr, fee: 3950, status: "confirmed", days: 1 });
+  const [newShow, setNewShow] = useState({ name: "", date: todayStr, fee: 3950, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 });
+  const [expandedCosts, setExpandedCosts] = useState(null); // show id with expanded cost breakdown
 
   const openAddModal = () => {
     const t = new Date();
     const ds = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-    setNewShow({ name: "", date: ds, fee: 3950, status: "confirmed", days: 1 });
+    setNewShow({ name: "", date: ds, fee: 3950, status: "confirmed", costs: { ...DEFAULT_SHOW_COSTS }, received: 0 });
     setShowModal(true);
   };
 
   const confirmAddShow = () => {
     if (!newShow.name.trim()) return;
     const d = new Date(newShow.date + 'T00:00:00');
-    setShows([...shows, { id: nextId, name: newShow.name.trim(), date: newShow.date, month: MONTHS[d.getMonth()], year: d.getFullYear(), fee: parseFloat(newShow.fee) || 0, status: newShow.status, days: parseInt(newShow.days) || 1 }]);
+    const costs = {};
+    Object.keys(DEFAULT_SHOW_COSTS).forEach(k => { costs[k] = parseFloat(newShow.costs[k]) || 0; });
+    setShows([...shows, { id: nextId, name: newShow.name.trim(), date: newShow.date, month: MONTHS[d.getMonth()], year: d.getFullYear(), fee: parseFloat(newShow.fee) || 0, status: newShow.status, costs, received: parseFloat(newShow.received) || 0 }]);
     setShowModal(false);
   };
 
@@ -1088,9 +1159,18 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
         const d = new Date(value + 'T00:00:00');
         return { ...s, date: value, month: MONTHS[d.getMonth()], year: d.getFullYear() };
       }
-      if (field === "fee" || field === "days") return { ...s, [field]: parseFloat(value) || 0 };
+      if (field === "fee" || field === "received") return { ...s, [field]: parseFloat(value) || 0 };
+      if (field.startsWith("costs.")) {
+        const key = field.split(".")[1];
+        return { ...s, costs: { ...(s.costs || DEFAULT_SHOW_COSTS), [key]: parseFloat(value) || 0 } };
+      }
       return { ...s, [field]: value };
     }));
+  };
+
+  const getShowTotalCosts = (show) => {
+    const c = show.costs || DEFAULT_SHOW_COSTS;
+    return (c.performers || 0) + (c.hotels || 0) + (c.perDiems || 0) + (c.travel || 0) + (c.other || 0);
   };
 
   const removeShow = (id) => {
@@ -1155,54 +1235,87 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-              {["Show", "Date", "Days", "Fee", "Status", "Weighted", ""].map((h, i) => (
+              {["Show", "Date", "Fee", "Costs", "Received", "Status", "Weighted", ""].map((h, i) => (
                 <th key={i} style={{ padding: "10px 12px", textAlign: i >= 2 ? "right" : "left",
                   fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {sorted.map(show => (
-              <tr key={show.id} style={{ borderBottom: `1px solid ${C.border}22` }}
-                onMouseEnter={e => e.currentTarget.style.background = C.surfaceHover}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <td style={{ padding: "8px 12px" }}>
-                  <EditableText value={show.name} onChange={v => updateShow(show.id, "name", v)}
-                    style={{ fontSize: 13, fontWeight: 600, color: C.text }} />
-                </td>
-                <td style={{ padding: "8px 12px" }}>
-                  <MonthDatePicker value={show.date || ""} onChange={v => updateShow(show.id, "date", v)} />
-                </td>
-                <td style={{ padding: "8px 12px", textAlign: "right" }}>
-                  <EditableCell value={show.days} prefix="" onChange={v => updateShow(show.id, "days", v)} />
-                </td>
-                <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: C.green }}>
-                  <EditableCell value={show.fee} onChange={v => updateShow(show.id, "fee", v)} />
-                </td>
-                <td style={{ padding: "8px 12px", textAlign: "right" }}>
-                  <select value={show.status} onChange={e => updateShow(show.id, "status", e.target.value)}
-                    style={{ background: "transparent", color: STATUS_CONFIG[show.status].color,
-                      border: `1px solid ${STATUS_CONFIG[show.status].color}44`, borderRadius: 10,
-                      padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="likely">Likely</option>
-                    <option value="hoped">Hoped For</option>
-                  </select>
-                </td>
-                <td style={{ padding: "8px 12px", textAlign: "right", color: C.textMuted, fontSize: 12 }}>
-                  {fmt(show.fee * STATUS_CONFIG[show.status].prob)}
-                </td>
-                <td style={{ padding: "8px 12px", textAlign: "right" }}>
-                  <IconBtn icon="close" onClick={() => removeShow(show.id)} />
-                </td>
-              </tr>
-            ))}
+            {sorted.map(show => {
+              const totalCost = getShowTotalCosts(show);
+              const isExpanded = expandedCosts === show.id;
+              return (
+                <React.Fragment key={show.id}>
+                  <tr style={{ borderBottom: `1px solid ${C.border}22` }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.surfaceHover}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <td style={{ padding: "8px 12px" }}>
+                      <EditableText value={show.name} onChange={v => updateShow(show.id, "name", v)}
+                        style={{ fontSize: 13, fontWeight: 600, color: C.text }} />
+                    </td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <MonthDatePicker value={show.date || ""} onChange={v => updateShow(show.id, "date", v)} />
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: C.green }}>
+                      <EditableCell value={show.fee} onChange={v => updateShow(show.id, "fee", v)} />
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                      <span onClick={() => setExpandedCosts(isExpanded ? null : show.id)}
+                        style={{ cursor: "pointer", color: totalCost > 0 ? C.orange : C.textDim, fontSize: 12, fontWeight: 600 }}>
+                        {totalCost > 0 ? fmt(totalCost) : "—"}
+                        <span style={{ fontSize: 9, marginLeft: 3, opacity: 0.6 }}>{isExpanded ? "▲" : "▼"}</span>
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                      <EditableCell value={show.received || 0} onChange={v => updateShow(show.id, "received", v)} />
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                      <select value={show.status} onChange={e => updateShow(show.id, "status", e.target.value)}
+                        style={{ background: "transparent", color: STATUS_CONFIG[show.status].color,
+                          border: `1px solid ${STATUS_CONFIG[show.status].color}44`, borderRadius: 10,
+                          padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="likely">Likely</option>
+                        <option value="hoped">Hoped For</option>
+                      </select>
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", color: C.textMuted, fontSize: 12 }}>
+                      {fmt(show.fee * STATUS_CONFIG[show.status].prob)}
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                      <IconBtn icon="close" onClick={() => removeShow(show.id)} />
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr style={{ background: C.bg + "88" }}>
+                      <td colSpan={8} style={{ padding: "6px 12px 10px 24px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+                          {[
+                            { key: "performers", label: "Performers" },
+                            { key: "hotels", label: "Hotels" },
+                            { key: "perDiems", label: "Per Diems" },
+                            { key: "travel", label: "Travel" },
+                            { key: "other", label: "Other" },
+                          ].map(({ key, label }) => (
+                            <div key={key}>
+                              <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2, textTransform: "uppercase", fontWeight: 600 }}>{label}</div>
+                              <EditableCell value={(show.costs || {})[key] || 0} onChange={v => updateShow(show.id, `costs.${key}`, v)} />
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {/* Add Show Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add New Show" width={440}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add New Show" width={480}>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>Show Name</div>
           <input autoFocus value={newShow.name} onChange={e => setNewShow({ ...newShow, name: e.target.value })}
@@ -1217,19 +1330,13 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
             <MonthDatePicker value={newShow.date} onChange={v => setNewShow({ ...newShow, date: v })} />
           </div>
           <div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>Days</div>
-            <input type="number" min="1" value={newShow.days} onChange={e => setNewShow({ ...newShow, days: e.target.value })}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid ${C.border}`,
-                background: C.bg, color: C.text, fontSize: 14, outline: "none" }} />
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-          <div>
             <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>Fee ({C.currency || "£"})</div>
             <input type="number" value={newShow.fee} onChange={e => setNewShow({ ...newShow, fee: e.target.value })}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid ${C.border}`,
                 background: C.bg, color: C.text, fontSize: 14, outline: "none" }} />
           </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>Status</div>
             <select value={newShow.status} onChange={e => setNewShow({ ...newShow, status: e.target.value })}
@@ -1239,6 +1346,33 @@ function PipelinePage({ shows, setShows, confirmDelete }) {
               <option value="likely">Likely</option>
               <option value="hoped">Hoped For</option>
             </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>Received ({C.currency || "£"})</div>
+            <input type="number" value={newShow.received} onChange={e => setNewShow({ ...newShow, received: parseFloat(e.target.value) || 0 })}
+              placeholder="0"
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid ${C.border}`,
+                background: C.bg, color: C.text, fontSize: 14, outline: "none" }} />
+          </div>
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, fontWeight: 600 }}>Direct Costs ({C.currency || "£"})</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+            {[
+              { key: "performers", label: "Performers" },
+              { key: "hotels", label: "Hotels" },
+              { key: "perDiems", label: "Per Diems" },
+              { key: "travel", label: "Travel" },
+              { key: "other", label: "Other" },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2, textTransform: "uppercase" }}>{label}</div>
+                <input type="number" value={newShow.costs[key] || 0}
+                  onChange={e => setNewShow({ ...newShow, costs: { ...newShow.costs, [key]: parseFloat(e.target.value) || 0 } })}
+                  style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`,
+                    background: C.bg, color: C.text, fontSize: 12, outline: "none" }} />
+              </div>
+            ))}
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
@@ -2438,7 +2572,7 @@ function SparkCashflow() {
       const [page, setPage] = useState("dashboard");
       const [scenario, setScenario] = useState("expected");
       const [timeframe, setTimeframe] = useState(loaded?.timeframe || 12);
-      const [shows, setShows] = useState(migrateShowDates(loaded?.shows || DEFAULT_SHOWS));
+      const [shows, setShows] = useState(migrateShowFields(migrateShowDates(loaded?.shows || DEFAULT_SHOWS)));
       const [costGroups, setCostGroups] = useState(loaded?.costGroups || DEFAULT_COST_GROUPS);
       const [projects, setProjects] = useState(loaded?.projects || DEFAULT_PROJECTS);
       const [otherIncome, setOtherIncome] = useState(loaded?.otherIncome || DEFAULT_OTHER_INCOME);
